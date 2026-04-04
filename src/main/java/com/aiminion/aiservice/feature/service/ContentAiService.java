@@ -1,0 +1,90 @@
+package com.aiminion.aiservice.feature.service;
+
+import com.aiminion.aiservice.common.ai.handler.AiFeatureHandler;
+import com.aiminion.aiservice.common.ai.request.AiGenerateRequest;
+import com.aiminion.aiservice.common.ai.response.AiGenerateResponse;
+import com.aiminion.aiservice.common.enums.FeatureType;
+import com.aiminion.aiservice.feature.BaseAiServiceGenerator;
+import com.aiminion.aiservice.feature.request.ContentImageRequest;
+import com.aiminion.aiservice.feature.request.ContentRequest;
+import com.aiminion.aiservice.feature.request.ContentTextRequest;
+import com.aiminion.aiservice.feature.response.ContentImageResponse;
+import com.aiminion.aiservice.feature.response.ContentResponse;
+import com.aiminion.aiservice.feature.response.ContentTextResponse;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class ContentAiService
+        implements BaseAiServiceGenerator<ContentRequest, ContentResponse>,
+        AiFeatureHandler {
+
+    // Delegates to the two focused services — no duplicated logic
+    private final ContentTextAiService  contentTextAiService;
+    private final ContentImageAiService contentImageAiService;
+
+    @Override
+    public FeatureType getFeatureType() {
+        return FeatureType.GENERATE_CONTENT;
+    }
+
+    @Override
+    public AiGenerateResponse handle(AiGenerateRequest request, ObjectMapper objectMapper) {
+        ContentRequest req = objectMapper.convertValue(request.payload(), ContentRequest.class);
+
+        if (request.provider() != null) {
+            req = ContentRequest.builder()
+                    .topic(req.topic())
+                    .sourceLanguage(req.sourceLanguage())
+                    .targetLanguage(req.targetLanguage())
+                    .style(req.style())
+                    .imageSize(req.imageSize())
+                    .imageQuality(req.imageQuality())
+                    .provider(request.provider())
+                    .build();
+        }
+
+        ContentResponse result = generate(req);
+
+        return AiGenerateResponse.builder()
+                .featureType(FeatureType.GENERATE_CONTENT)
+                .usedProvider(result.usedProvider())
+                .result(result)
+                .build();
+    }
+
+    @Override
+    public ContentResponse generate(ContentRequest req) {
+        log.info("[Content] Generating text + image for topic='{}'", req.topic());
+
+        // Build sub-requests from the combined request
+        ContentTextRequest textRequest = ContentTextRequest.builder()
+                .topic(req.topic())
+                .sourceLanguage(req.sourceLanguage())
+                .targetLanguage(req.targetLanguage())
+                .style(req.style())
+                .provider(req.provider())
+                .build();
+
+        ContentImageRequest imageRequest = ContentImageRequest.builder()
+                .prompt(req.topic())
+                .size(req.imageSize())
+                .quality(req.imageQuality())
+                .provider(req.provider())
+                .build();
+
+        // Delegate — no logic duplicated
+        ContentTextResponse text  = contentTextAiService.generate(textRequest);
+        ContentImageResponse image = contentImageAiService.generate(imageRequest);
+
+        return ContentResponse.builder()
+                .text(text)
+                .image(image)
+                .usedProvider(text.usedProvider())
+                .build();
+    }
+}

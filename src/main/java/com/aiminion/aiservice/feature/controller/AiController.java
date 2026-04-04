@@ -1,4 +1,4 @@
-package com.aiminion.aiservice.controller;
+package com.aiminion.aiservice.feature.controller;
 
 import com.aiminion.aiservice.common.ai.request.AiGenerateRequest;
 import com.aiminion.aiservice.common.ai.response.AiGenerateResponse;
@@ -30,7 +30,7 @@ public class AiController {
     public ResponseEntity<ApiResponse<AiGenerateResponse>> generate(
             @Valid @RequestBody AiGenerateRequest request) {
 
-        AiGenerateResponse response = aiServiceRouter.route(request);
+        final AiGenerateResponse response = aiServiceRouter.route(request);
         return ResponseEntity.ok(ApiResponse.success(response, "Generated successfully."));
     }
 }
