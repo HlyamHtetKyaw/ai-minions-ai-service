@@ -24,7 +24,7 @@ public class AudioTranscribeFeatureHandler implements AiFeatureHandler {
 
 	@Override
 	public FeatureType getFeatureType() {
-		return FeatureType.AUDIO;
+		return FeatureType.TRANSCRIBE;
 	}
 
 	@Override
@@ -47,17 +47,17 @@ public class AudioTranscribeFeatureHandler implements AiFeatureHandler {
 
 		String mt = mimeType != null && !mimeType.isBlank() ? mimeType : p.path("mimeType").asText("audio/wav");
 
-		log.info("AUDIO transcribe: inline audio {} bytes", audioBytes.length);
+		log.info("TRANSCRIBE: inline audio {} bytes", audioBytes.length);
 		return buildResponse(objectMapper, audioBytes, mt);
 	}
 
 	private void validateTranscribeRequest(AiGenerateRequest request, JsonNode p) {
 		String op = p.path("operation").asText("transcribe");
 		if (!"transcribe".equalsIgnoreCase(op)) {
-			throw new IllegalArgumentException("Unsupported AUDIO operation: " + op + " (supported: transcribe)");
+			throw new IllegalArgumentException("Unsupported TRANSCRIBE operation: " + op + " (supported: transcribe)");
 		}
 		if (request.provider() != null && request.provider() != AiProvider.GEMINI) {
-			throw new IllegalArgumentException("Transcription uses Google AI (Gemini); provider must be GEMINI or omitted");
+			throw new IllegalArgumentException("TRANSCRIBE uses Google AI (Gemini); provider must be GEMINI or omitted");
 		}
 	}
 
@@ -66,7 +66,7 @@ public class AudioTranscribeFeatureHandler implements AiFeatureHandler {
 		ObjectNode result = objectMapper.createObjectNode();
 		result.put("text", text);
 		return AiGenerateResponse.builder()
-				.featureType(FeatureType.AUDIO)
+				.featureType(FeatureType.TRANSCRIBE)
 				.usedProvider(AiProvider.GEMINI)
 				.result(result)
 				.build();

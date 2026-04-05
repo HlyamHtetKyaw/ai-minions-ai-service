@@ -41,7 +41,8 @@ public class AiController {
 					+ "- GENERATE_CONTENT_TEXT\n"
 					+ "- GENERATE_CONTENT_IMAGE\n"
 					+ "- GENERATE_CONTENT\n\n"
-					+ "AUDIO / transcribe: use multipart POST /generate with `request` (JSON) + `audio` (binary) parts — not this JSON endpoint."
+					+ "(TRANSCRIBE is not available as JSON-only; use multipart below.)\n\n"
+					+ "TRANSCRIBE: use multipart POST /generate with `request` (JSON) + `audio` (binary) parts — not this JSON endpoint."
 	)
 	@ApiResponses(value = {
 			@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Successfully generated content"),
@@ -130,7 +131,7 @@ public class AiController {
 
 	@Operation(
 			summary = "Generate with raw audio (transcribe)",
-			description = "Multipart: JSON `request` part (Content-Type: application/json; featureType AUDIO, operation transcribe) + binary `audio` part. Used by the processing worker."
+			description = "Multipart: JSON `request` part (Content-Type: application/json; featureType TRANSCRIBE, payload.operation transcribe) + binary `audio` part. Used by the processing worker."
 	)
 	@PostMapping(value = "/generate", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
 	public ResponseEntity<ApiResponse<AiGenerateResponse>> generateMultipart(

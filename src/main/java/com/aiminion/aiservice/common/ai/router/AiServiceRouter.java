@@ -52,14 +52,14 @@ public class AiServiceRouter {
 			byte[] audioBytes,
 			String filename,
 			String mimeType) {
-		if (request.featureType() != FeatureType.AUDIO) {
-			throw new IllegalArgumentException("Inline audio is only supported for featureType AUDIO");
+		if (request.featureType() != FeatureType.TRANSCRIBE) {
+			throw new IllegalArgumentException("Inline audio is only supported for featureType TRANSCRIBE");
 		}
-		AiFeatureHandler handler = handlerMap.get(FeatureType.AUDIO);
+		AiFeatureHandler handler = handlerMap.get(FeatureType.TRANSCRIBE);
 		if (!(handler instanceof AudioTranscribeFeatureHandler audioHandler)) {
-			throw new IllegalStateException("AUDIO handler is not AudioTranscribeFeatureHandler");
+			throw new IllegalStateException("TRANSCRIBE handler is not AudioTranscribeFeatureHandler");
 		}
-		log.info("[AiServiceRouter] Inline AUDIO transcribe provider={} ({} bytes)", request.provider(), audioBytes.length);
+		log.info("[AiServiceRouter] Inline TRANSCRIBE provider={} ({} bytes)", request.provider(), audioBytes.length);
 		return audioHandler.handleInlineAudio(request, audioBytes, filename, mimeType, objectMapper);
 	}
 }
