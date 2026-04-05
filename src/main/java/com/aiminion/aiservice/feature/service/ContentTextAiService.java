@@ -1,0 +1,116 @@
+package com.aiminion.aiservice.feature.service;
+
+import com.aiminion.aiservice.common.ai.generator.AiContentTextGenerator;
+import com.aiminion.aiservice.common.ai.handler.AiFeatureHandler;
+import com.aiminion.aiservice.common.ai.prompt.impl.PromptBuilderImpl;
+import com.aiminion.aiservice.common.ai.request.AiGenerateRequest;
+import com.aiminion.aiservice.common.ai.request.AiRequest;
+import com.aiminion.aiservice.common.ai.response.AiGenerateResponse;
+import com.aiminion.aiservice.common.ai.response.AiResponse;
+import com.aiminion.aiservice.common.enums.FeatureType;
+import com.aiminion.aiservice.feature.BaseAiServiceGenerator;
+import com.aiminion.aiservice.feature.request.ContentTextRequest;
+import com.aiminion.aiservice.feature.response.ContentTextResponse;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class ContentTextAiService
+        implements BaseAiServiceGenerator<ContentTextRequest, ContentTextResponse>,
+        AiFeatureHandler {
+
+    private final AiContentTextGenerator aiContentTextGenerator;
+    private final PromptBuilderImpl promptBuilderImpl;
+
+    private static final String DEFAULT_SOURCE = "English";
+    private static final String DEFAULT_TARGET = "Myanmar";
+    private static final String DEFAULT_STYLE  = "Formal";
+    private static final String DEFAULT_CONTENT_TYPE = "Caption";
+
+    @Override
+    public FeatureType getFeatureType() {
+        return FeatureType.GENERATE_CONTENT_TEXT;
+    }
+
+    @Override
+    public AiGenerateResponse handle(AiGenerateRequest request, ObjectMapper objectMapper) {
+        ContentTextRequest req = objectMapper.convertValue(request.payload(), ContentTextRequest.class);
+
+        if (request.provider() != null) {
+            req = ContentTextRequest.builder()
+                    .topic(req.topic())
+                    .contentType(req.contentType())
+                    .sourceLanguage(req.sourceLanguage())
+                    .targetLanguage(req.targetLanguage())
+                    .style(req.style())
+                    .provider(request.provider())
+                    .build();
+        }
+
+        ContentTextResponse result = generate(req);
+
+        return AiGenerateResponse.builder()
+                .featureType(FeatureType.GENERATE_CONTENT_TEXT)
+                .usedProvider(result.usedProvider())
+                .result(result)
+                .build();
+    }
+
+    @Override
+    public ContentTextResponse generate(ContentTextRequest req) {
+        String source = isBlank(req.sourceLanguage()) ? DEFAULT_SOURCE : req.sourceLanguage().trim();
+        String target = isBlank(req.targetLanguage()) ? DEFAULT_TARGET : req.targetLanguage().trim();
+        String contentType = isBlank(req.contentType()) ? DEFAULT_STYLE : req.contentType().trim();
+        String style  = isBlank(req.style())          ? DEFAULT_CONTENT_TYPE  : req.style().trim();
+
+        log.info("[ContentText] {}→{} style={}", source, target, style);
+
+        AiRequest aiRequest = AiRequest.builder()
+                .systemPrompt(promptBuilderImpl.buildContentTextPrompt(source, target, contentType, style))
+                .userMessage(req.topic())
+                .provider(req.provider())
+                .build();
+
+        AiResponse aiResponse = aiContentTextGenerator.generate(aiRequest);
+
+        String rawContent = aiResponse.content();
+        String title   = parseSection(rawContent, "TITLE");
+        String content = parseSection(rawContent, "CONTENT");
+
+        log.info("[ContentText] Parsed title='{}'", title);
+
+        return ContentTextResponse.builder()
+                .title(title)
+                .generatedContent(content)
+                .generatedFrom(source)
+                .generatedTo(target)
+                .style(style)
+                .usedProvider(aiResponse.usedProvider())
+                .build();
+    }
+
+    /**
+     * Extracts content between [TAG]: and the next [TAG] or end of string.
+     * e.g. "[TITLE]: My Title\n[CONTENT]: ..." → "My Title"
+     */
+    private String parseSection(String raw, String tag) {
+        String marker = "[" + tag + "]:";
+        int start = raw.indexOf(marker);
+        if (start == -1) {
+            log.warn("[ContentText] Could not find tag [{}] in response", tag);
+            return raw.trim();
+        }
+        start += marker.length();
+
+        // Find next tag marker or end of string
+        int end = raw.indexOf("[", start);
+        String section = end == -1 ? raw.substring(start) : raw.substring(start, end);
+        return section.trim();
+    }
+
+    private boolean isBlank(String s) { return s == null || s.isBlank(); }
+}
