@@ -1,12 +1,5 @@
 package com.aiminion.aiservice.feature.audio;
 
-import java.io.IOException;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.time.Duration;
-
 import org.springframework.stereotype.Component;
 
 import com.aiminion.aiservice.common.ai.client.GoogleGeminiTranscriptionClient;
@@ -27,11 +20,6 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class AudioTranscribeFeatureHandler implements AiFeatureHandler {
 
-	private static final HttpClient HTTP = HttpClient.newBuilder()
-			.connectTimeout(Duration.ofSeconds(30))
-			.followRedirects(HttpClient.Redirect.NORMAL)
-			.build();
-
 	private final GoogleGeminiTranscriptionClient googleGeminiTranscriptionClient;
 
 	@Override
@@ -41,21 +29,8 @@ public class AudioTranscribeFeatureHandler implements AiFeatureHandler {
 
 	@Override
 	public AiGenerateResponse handle(AiGenerateRequest request, ObjectMapper objectMapper) {
-		JsonNode p = request.payload();
-		validateTranscribeRequest(request, p);
-
-		String url = p.path("audioPresignedUrl").asText(null);
-		if (url == null || url.isBlank()) {
-			throw new IllegalArgumentException(
-					"payload.audioPresignedUrl is required for JSON requests; use multipart /generate with an audio part for direct upload");
-		}
-
-		String mimeType = p.path("mimeType").asText("audio/wav");
-
-		log.info("AUDIO transcribe: downloading from presigned URL ({} chars)", url.length());
-
-		byte[] audio = downloadAudio(url);
-		return buildResponse(objectMapper, audio, mimeType);
+		throw new IllegalArgumentException(
+				"AUDIO transcribe is only supported via multipart POST /generate with `request` (JSON) and `audio` (binary) parts.");
 	}
 
 	public AiGenerateResponse handleInlineAudio(
@@ -95,22 +70,5 @@ public class AudioTranscribeFeatureHandler implements AiFeatureHandler {
 				.usedProvider(AiProvider.GEMINI)
 				.result(result)
 				.build();
-	}
-
-	private static byte[] downloadAudio(String url) {
-		try {
-			HttpRequest req = HttpRequest.newBuilder(URI.create(url.trim()))
-					.timeout(Duration.ofMinutes(15))
-					.GET()
-					.build();
-			HttpResponse<byte[]> res = HTTP.send(req, HttpResponse.BodyHandlers.ofByteArray());
-			if (res.statusCode() / 100 != 2) {
-				throw new IllegalStateException("Failed to download audio: HTTP " + res.statusCode());
-			}
-			return res.body();
-		} catch (IOException | InterruptedException e) {
-			Thread.currentThread().interrupt();
-			throw new IllegalStateException("Failed to download audio from presigned URL: " + e.getMessage(), e);
-		}
 	}
 }

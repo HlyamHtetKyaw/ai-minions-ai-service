@@ -1,9 +1,9 @@
 package com.aiminion.aiservice.common.ai.voice;
 
-public final class VoiceDictationStyleTranscribePrompts {
+import lombok.NoArgsConstructor;
 
-	private VoiceDictationStyleTranscribePrompts() {
-	}
+@NoArgsConstructor
+public final class VoiceDictationStyleTranscribePrompts {
 
 	private static final String BASE_RULES = """
 			RULES:

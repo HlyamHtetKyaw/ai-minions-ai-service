@@ -22,13 +22,6 @@ public class GlobalExceptionHandler {
 
 	private static final int UPSTREAM_BODY_LOG_MAX = 4096;
 
-	@ExceptionHandler(ResourceNotFoundException.class)
-	public ResponseEntity<ApiResponse<?>> handleNotFound(ResourceNotFoundException ex) {
-		log.warn("Not found: {}", ex.getMessage());
-		return ResponseEntity.status(HttpStatus.NOT_FOUND)
-				.body(ApiResponse.fail(404, ex.getMessage(), null));
-	}
-
 	@ExceptionHandler(MethodArgumentNotValidException.class)
 	public ResponseEntity<ApiResponse<?>> handleValidation(MethodArgumentNotValidException ex) {
 		Map<String, Object> fields = new LinkedHashMap<>();
