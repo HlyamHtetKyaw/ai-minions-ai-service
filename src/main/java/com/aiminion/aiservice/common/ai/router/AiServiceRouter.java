@@ -4,6 +4,7 @@ import com.aiminion.aiservice.common.ai.handler.AiFeatureHandler;
 import com.aiminion.aiservice.common.ai.request.AiGenerateRequest;
 import com.aiminion.aiservice.common.ai.response.AiGenerateResponse;
 import com.aiminion.aiservice.common.enums.FeatureType;
+import com.aiminion.aiservice.feature.audio.AudioTranscribeFeatureHandler;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -46,4 +47,19 @@ public class AiServiceRouter {
 
         return handler.handle(request, objectMapper);
     }
+	public AiGenerateResponse routeWithInlineAudio(
+			AiGenerateRequest request,
+			byte[] audioBytes,
+			String filename,
+			String mimeType) {
+		if (request.featureType() != FeatureType.TRANSCRIBE) {
+			throw new IllegalArgumentException("Inline audio is only supported for featureType TRANSCRIBE");
+		}
+		AiFeatureHandler handler = handlerMap.get(FeatureType.TRANSCRIBE);
+		if (!(handler instanceof AudioTranscribeFeatureHandler audioHandler)) {
+			throw new IllegalStateException("TRANSCRIBE handler is not AudioTranscribeFeatureHandler");
+		}
+		log.info("[AiServiceRouter] Inline TRANSCRIBE provider={} ({} bytes)", request.provider(), audioBytes.length);
+		return audioHandler.handleInlineAudio(request, audioBytes, filename, mimeType, objectMapper);
+	}
 }
