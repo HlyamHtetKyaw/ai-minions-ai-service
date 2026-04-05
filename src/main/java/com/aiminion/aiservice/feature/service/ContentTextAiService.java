@@ -29,6 +29,7 @@ public class ContentTextAiService
     private static final String DEFAULT_SOURCE = "English";
     private static final String DEFAULT_TARGET = "Myanmar";
     private static final String DEFAULT_STYLE  = "Formal";
+    private static final String DEFAULT_CONTENT_TYPE = "Caption";
 
     @Override
     public FeatureType getFeatureType() {
@@ -42,6 +43,7 @@ public class ContentTextAiService
         if (request.provider() != null) {
             req = ContentTextRequest.builder()
                     .topic(req.topic())
+                    .contentType(req.contentType())
                     .sourceLanguage(req.sourceLanguage())
                     .targetLanguage(req.targetLanguage())
                     .style(req.style())
@@ -62,25 +64,52 @@ public class ContentTextAiService
     public ContentTextResponse generate(ContentTextRequest req) {
         String source = isBlank(req.sourceLanguage()) ? DEFAULT_SOURCE : req.sourceLanguage().trim();
         String target = isBlank(req.targetLanguage()) ? DEFAULT_TARGET : req.targetLanguage().trim();
-        String style  = isBlank(req.style())          ? DEFAULT_STYLE  : req.style().trim();
+        String contentType = isBlank(req.contentType()) ? DEFAULT_STYLE : req.contentType().trim();
+        String style  = isBlank(req.style())          ? DEFAULT_CONTENT_TYPE  : req.style().trim();
 
         log.info("[ContentText] {}→{} style={}", source, target, style);
 
         AiRequest aiRequest = AiRequest.builder()
-                .systemPrompt(promptBuilderImpl.buildContentTextPrompt(source, target, style))
+                .systemPrompt(promptBuilderImpl.buildContentTextPrompt(source, target, contentType, style))
                 .userMessage(req.topic())
                 .provider(req.provider())
                 .build();
 
         AiResponse aiResponse = aiContentTextGenerator.generate(aiRequest);
 
+        String rawContent = aiResponse.content();
+        String title   = parseSection(rawContent, "TITLE");
+        String content = parseSection(rawContent, "CONTENT");
+
+        log.info("[ContentText] Parsed title='{}'", title);
+
         return ContentTextResponse.builder()
-                .generatedContent(aiResponse.content())
+                .title(title)
+                .generatedContent(content)
                 .generatedFrom(source)
                 .generatedTo(target)
                 .style(style)
                 .usedProvider(aiResponse.usedProvider())
                 .build();
+    }
+
+    /**
+     * Extracts content between [TAG]: and the next [TAG] or end of string.
+     * e.g. "[TITLE]: My Title\n[CONTENT]: ..." → "My Title"
+     */
+    private String parseSection(String raw, String tag) {
+        String marker = "[" + tag + "]:";
+        int start = raw.indexOf(marker);
+        if (start == -1) {
+            log.warn("[ContentText] Could not find tag [{}] in response", tag);
+            return raw.trim();
+        }
+        start += marker.length();
+
+        // Find next tag marker or end of string
+        int end = raw.indexOf("[", start);
+        String section = end == -1 ? raw.substring(start) : raw.substring(start, end);
+        return section.trim();
     }
 
     private boolean isBlank(String s) { return s == null || s.isBlank(); }

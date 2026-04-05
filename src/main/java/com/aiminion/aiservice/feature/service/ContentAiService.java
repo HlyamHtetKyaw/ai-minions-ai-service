@@ -61,7 +61,6 @@ public class ContentAiService
     public ContentResponse generate(ContentRequest req) {
         log.info("[Content] Generating text + image for topic='{}'", req.topic());
 
-        // Build sub-requests from the combined request
         ContentTextRequest textRequest = ContentTextRequest.builder()
                 .topic(req.topic())
                 .sourceLanguage(req.sourceLanguage())
@@ -70,15 +69,17 @@ public class ContentAiService
                 .provider(req.provider())
                 .build();
 
+        ContentTextResponse text = contentTextAiService.generate(textRequest);
+
+        log.info("[Content] Using AI title as image prompt='{}'", text.title());
+
         ContentImageRequest imageRequest = ContentImageRequest.builder()
-                .prompt(req.topic())
+                .prompt(text.title())
                 .size(req.imageSize())
                 .quality(req.imageQuality())
                 .provider(req.provider())
                 .build();
 
-        // Delegate — no logic duplicated
-        ContentTextResponse text  = contentTextAiService.generate(textRequest);
         ContentImageResponse image = contentImageAiService.generate(imageRequest);
 
         return ContentResponse.builder()

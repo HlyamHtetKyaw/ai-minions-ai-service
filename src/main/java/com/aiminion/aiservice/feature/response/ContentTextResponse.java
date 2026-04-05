@@ -5,6 +5,7 @@ import lombok.Builder;
 
 @Builder
 public record ContentTextResponse(
+        String title,
         String generatedContent,
         String generatedFrom,
         String generatedTo,
