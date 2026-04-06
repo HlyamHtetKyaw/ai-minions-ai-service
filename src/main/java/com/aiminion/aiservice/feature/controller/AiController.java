@@ -40,7 +40,7 @@ public class AiController {
 					+ "- TRANSLATE\n"
 					+ "- GENERATE_CONTENT_TEXT\n"
 					+ "- GENERATE_CONTENT_IMAGE\n"
-					+ "- GENERATE_CONTENT\n\n"
+					+ "- GENERATE_CONTENT (Both Image and Text)\n\n"
 					+ "(TRANSCRIBE is not available as JSON-only; use multipart below.)\n\n"
 					+ "TRANSCRIBE: use multipart POST /generate with `request` (JSON) + `audio` (binary) parts — not this JSON endpoint."
 	)
@@ -81,6 +81,7 @@ public class AiController {
 													  "provider": "OPENAI",
 													  "payload": {
 													    "topic": "Importance of sleep",
+														"contentType": "Script",
 													    "sourceLanguage": "English",
 													    "targetLanguage": "Myanmar",
 													    "style": "Formal"
@@ -112,6 +113,7 @@ public class AiController {
 													  "provider": "OPENAI",
 													  "payload": {
 													    "topic": "Importance of sleep",
+													    "contentType": "Script",
 													    "sourceLanguage": "English",
 													    "targetLanguage": "Myanmar",
 													    "style": "Formal",

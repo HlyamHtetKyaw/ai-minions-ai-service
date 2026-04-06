@@ -85,11 +85,12 @@ public class ContentTextAiService
 
         return ContentTextResponse.builder()
                 .title(title)
-                .generatedContent(content)
+                .contentType(contentType)
                 .generatedFrom(source)
                 .generatedTo(target)
                 .style(style)
                 .usedProvider(aiResponse.usedProvider())
+                .generatedContent(content)
                 .build();
     }
 

@@ -19,6 +19,9 @@ public record ContentRequest(
         @Size(max = 1500, message = "Topic must not exceed 1500 characters.")
         String topic,
 
+        @Schema(description = "Type of content to generate", example = "Script")
+        String contentType,
+
         @Schema(example = "English", defaultValue = "English")
         String sourceLanguage,
 

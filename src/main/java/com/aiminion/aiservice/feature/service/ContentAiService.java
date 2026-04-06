@@ -39,6 +39,7 @@ public class ContentAiService
         if (request.provider() != null) {
             req = ContentRequest.builder()
                     .topic(req.topic())
+                    .contentType(req.contentType())
                     .sourceLanguage(req.sourceLanguage())
                     .targetLanguage(req.targetLanguage())
                     .style(req.style())
@@ -63,6 +64,7 @@ public class ContentAiService
 
         ContentTextRequest textRequest = ContentTextRequest.builder()
                 .topic(req.topic())
+                .contentType(req.contentType())
                 .sourceLanguage(req.sourceLanguage())
                 .targetLanguage(req.targetLanguage())
                 .style(req.style())
@@ -72,6 +74,8 @@ public class ContentAiService
         ContentTextResponse text = contentTextAiService.generate(textRequest);
 
         log.info("[Content] Using AI title as image prompt='{}'", text.title());
+
+        System.out.println("Image Title to Generate : " + text.title());
 
         ContentImageRequest imageRequest = ContentImageRequest.builder()
                 .prompt(text.title())
