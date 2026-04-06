@@ -7,6 +7,9 @@ import com.aiminion.aiservice.common.enums.AiProvider;
 import com.aiminion.aiservice.common.enums.FeatureType;
 import com.aiminion.aiservice.feature.BaseAiServiceGenerator;
 
+import com.aiminion.aiservice.feature.imageOverlay.request.OverlayRequest;
+import com.aiminion.aiservice.feature.imageOverlay.response.OverlayResult;
+import com.aiminion.aiservice.feature.imageOverlay.service.ImageOverlayService;
 import com.aiminion.aiservice.feature.request.ContentImageRequest;
 import com.aiminion.aiservice.feature.response.ContentImageResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -22,6 +25,7 @@ public class ContentImageAiService
         AiFeatureHandler {
 
     private final AiContentImageGenerator aiContentImageGenerator;
+    private final ImageOverlayService imageOverlayService;
 
     private static final String DEFAULT_SIZE    = "1024x1024";
     private static final String DEFAULT_QUALITY = "standard";
@@ -61,11 +65,28 @@ public class ContentImageAiService
         log.info("[ContentImage] Generating image — size={} quality={}", size, quality);
 
         String imageUrl  = aiContentImageGenerator.generateImage(req.prompt(), size, quality);
-        String imageName = aiContentImageGenerator.generateImageName();
+        boolean hasOverlay = !isBlank(req.logoUrl()) || !isBlank(req.photoUrl());
+
+        if (hasOverlay) {
+            OverlayRequest overlayRequest = OverlayRequest.builder()
+                    .baseImageUrl(imageUrl)
+                    .logoUrl(req.logoUrl())
+                    .photoUrl(req.photoUrl())
+                    .build();
+
+            OverlayResult overlayResult = imageOverlayService.compose(overlayRequest);
+
+            return ContentImageResponse.builder()
+                    .imageBytes(overlayResult.imageBytes())   // ← composed image
+                    .imageName(overlayResult.imageName())
+                    .prompt(req.prompt())
+                    .usedProvider(AiProvider.OPENAI)
+                    .build();
+        }
 
         return ContentImageResponse.builder()
                 .imageUrl(imageUrl)
-                .imageName(imageName)
+                .imageName(aiContentImageGenerator.generateImageName())
                 .prompt(req.prompt())
                 .usedProvider(AiProvider.OPENAI)   // DALL-E is OpenAI only
                 .build();

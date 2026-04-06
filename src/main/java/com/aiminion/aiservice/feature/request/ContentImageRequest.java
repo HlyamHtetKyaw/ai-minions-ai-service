@@ -23,6 +23,12 @@ public record ContentImageRequest(
         @Schema(example = "standard", defaultValue = "standard")
         String quality,
 
+        @Schema(description = "URL of logo to overlay (optional)")
+        String logoUrl,         // ← nullable
+
+        @Schema(description = "URL of photo to overlay (optional)")
+        String photoUrl,        // ← nullable
+
         @Schema(example = "OPENAI")
         AiProvider provider
 

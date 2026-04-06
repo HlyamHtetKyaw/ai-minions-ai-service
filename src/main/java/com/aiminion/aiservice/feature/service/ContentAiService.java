@@ -5,6 +5,7 @@ import com.aiminion.aiservice.common.ai.request.AiGenerateRequest;
 import com.aiminion.aiservice.common.ai.response.AiGenerateResponse;
 import com.aiminion.aiservice.common.enums.FeatureType;
 import com.aiminion.aiservice.feature.BaseAiServiceGenerator;
+import com.aiminion.aiservice.feature.imageOverlay.service.ImageOverlayService;
 import com.aiminion.aiservice.feature.request.ContentImageRequest;
 import com.aiminion.aiservice.feature.request.ContentRequest;
 import com.aiminion.aiservice.feature.request.ContentTextRequest;
@@ -26,6 +27,7 @@ public class ContentAiService
     // Delegates to the two focused services — no duplicated logic
     private final ContentTextAiService  contentTextAiService;
     private final ContentImageAiService contentImageAiService;
+    private final ImageOverlayService imageOverlayService;
 
     @Override
     public FeatureType getFeatureType() {
