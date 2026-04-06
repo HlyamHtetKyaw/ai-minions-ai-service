@@ -47,6 +47,8 @@ public class ContentAiService
                     .style(req.style())
                     .imageSize(req.imageSize())
                     .imageQuality(req.imageQuality())
+                    .logoUrl(req.logoUrl())
+                    .photoUrl(req.photoUrl())
                     .provider(request.provider())
                     .build();
         }
@@ -84,6 +86,8 @@ public class ContentAiService
                 .size(req.imageSize())
                 .quality(req.imageQuality())
                 .provider(req.provider())
+                .logoUrl(req.logoUrl())
+                .photoUrl(req.photoUrl())
                 .build();
 
         ContentImageResponse image = contentImageAiService.generate(imageRequest);
@@ -92,6 +96,7 @@ public class ContentAiService
                 .text(text)
                 .image(image)
                 .usedProvider(text.usedProvider())
+                .imageBytes(image.imageBytes())
                 .build();
     }
 }

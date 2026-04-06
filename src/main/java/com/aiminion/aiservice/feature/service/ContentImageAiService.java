@@ -45,6 +45,8 @@ public class ContentImageAiService
                     .size(req.size())
                     .quality(req.quality())
                     .provider(request.provider())
+                    .logoUrl(req.logoUrl())
+                    .photoUrl(req.photoUrl())
                     .build();
         }
 

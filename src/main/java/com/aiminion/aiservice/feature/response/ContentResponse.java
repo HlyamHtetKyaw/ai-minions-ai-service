@@ -7,5 +7,6 @@ import lombok.Builder;
 public record ContentResponse(
         ContentTextResponse  text,
         ContentImageResponse image,
+        byte[] imageBytes,
         AiProvider usedProvider
 ) {}

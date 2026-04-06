@@ -99,7 +99,9 @@ public class AiController {
 													  "payload": {
 													    "prompt": "A peaceful Myanmar village at sunset",
 													    "size": "1024x1024",
-													    "quality": "standard"
+													    "quality": "standard",
+													    "logoUrl":  "https://fastly.picsum.photos/id/866/200/300.jpg?hmac=rcadCENKh4rD6MAp6V_ma-AyWv641M4iiOpe1RyFHeI",
+													  	"photoUrl": "https://fastly.picsum.photos/id/866/200/300.jpg?hmac=rcadCENKh4rD6MAp6V_ma-AyWv641M4iiOpe1RyFHeI"
 													  }
 													}
 													"""
@@ -118,7 +120,9 @@ public class AiController {
 													    "targetLanguage": "Myanmar",
 													    "style": "Formal",
 													    "imageSize": "1024x1024",
-													    "imageQuality": "standard"
+													    "imageQuality": "standard",
+													    "logoUrl":  "https://fastly.picsum.photos/id/866/200/300.jpg?hmac=rcadCENKh4rD6MAp6V_ma-AyWv641M4iiOpe1RyFHeI",
+													  	"photoUrl": "https://fastly.picsum.photos/id/866/200/300.jpg?hmac=rcadCENKh4rD6MAp6V_ma-AyWv641M4iiOpe1RyFHeI"
 													  }
 													}
 													"""
