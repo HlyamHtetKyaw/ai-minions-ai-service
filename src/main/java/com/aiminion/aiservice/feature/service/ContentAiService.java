@@ -50,6 +50,16 @@ public class ContentAiService
                     .logoUrl(req.logoUrl())
                     .photoUrl(req.photoUrl())
                     .provider(request.provider())
+
+                    .logoPosition(req.logoPosition())
+                    .logoWidth(req.logoWidth())
+                    .logoHeight(req.logoHeight())
+                    .logoMargin(req.logoMargin())
+
+                    .photoPosition(req.photoPosition())
+                    .photoUrl(req.photoUrl())
+                    .photoWidth(req.photoWidth())
+                    .photoHeight(req.photoHeight())
                     .build();
         }
 
@@ -88,6 +98,16 @@ public class ContentAiService
                 .provider(req.provider())
                 .logoUrl(req.logoUrl())
                 .photoUrl(req.photoUrl())
+
+                .logoPosition(req.logoPosition())
+                .logoWidth(req.logoWidth())
+                .logoHeight(req.logoHeight())
+                .logoMargin(req.logoMargin())
+
+                .photoPosition(req.photoPosition())
+                .photoUrl(req.photoUrl())
+                .photoWidth(req.photoWidth())
+                .photoHeight(req.photoHeight())
                 .build();
 
         ContentImageResponse image = contentImageAiService.generate(imageRequest);

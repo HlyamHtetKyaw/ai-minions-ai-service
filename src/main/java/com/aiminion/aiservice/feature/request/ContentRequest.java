@@ -44,6 +44,17 @@ public record ContentRequest(
         String photoUrl,        // ← nullable
 
         @Schema(example = "OPENAI")
-        AiProvider provider
+        AiProvider provider,
+
+        // Optional overlay config from user
+        String  logoPosition,
+        Integer logoWidth,
+        Integer logoHeight,
+        Integer logoMargin,
+
+        String  photoPosition,
+        Integer photoWidth,
+        Integer photoHeight,
+        Integer photoMargin
 
 ) implements AiPayload {}
