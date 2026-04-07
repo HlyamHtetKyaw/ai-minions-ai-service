@@ -12,7 +12,10 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
 import java.net.URI;
+import java.net.URL;
 import java.time.Instant;
 
 /**
@@ -128,7 +131,27 @@ public class ImageOverlayService {
     }
 
     private BufferedImage loadImageFromUrl(String url) throws IOException {
-        return ImageIO.read(URI.create(url).toURL());
+        URL imageUrl = URI.create(url).toURL();
+        HttpURLConnection conn = (HttpURLConnection) imageUrl.openConnection();
+
+        conn.setRequestMethod("GET");
+        conn.setConnectTimeout(500000);
+        conn.setReadTimeout(500000);
+
+//        conn.setRequestProperty("User-Agent", "Mozilla/5.0");
+
+        int status = conn.getResponseCode();
+        if (status != 200) {
+            throw new IOException("Failed to fetch image. HTTP Status: " + status);
+        }
+
+        try (InputStream is = conn.getInputStream()) {
+            BufferedImage img = ImageIO.read(is);
+            if (img == null) {
+                throw new IOException("ImageIO.read returned null (invalid image format)");
+            }
+            return img;
+        }
     }
 
     private byte[] toBytes(BufferedImage image) throws IOException {

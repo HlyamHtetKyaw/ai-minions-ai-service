@@ -8,5 +8,6 @@ public record ContentResponse(
         ContentTextResponse  text,
         ContentImageResponse image,
         byte[] imageBytes,
+        String imageBase64,
         AiProvider usedProvider
 ) {}

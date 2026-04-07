@@ -6,8 +6,9 @@ import lombok.Builder;
 @Builder
 public record ContentImageResponse(
         String imageUrl,
-        byte[] imageBytes,
         String imageName,
         String prompt,
+        byte[] imageBytes,
+        String imageBase64,
         AiProvider usedProvider
 ) {}

@@ -17,6 +17,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.Base64;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -79,10 +81,12 @@ public class ContentImageAiService
             OverlayResult overlayResult = imageOverlayService.compose(overlayRequest);
 
             return ContentImageResponse.builder()
-                    .imageBytes(overlayResult.imageBytes())   // ← composed image
+                    .imageUrl(imageUrl)
                     .imageName(overlayResult.imageName())
                     .prompt(req.prompt())
                     .usedProvider(AiProvider.OPENAI)
+                    .imageBytes(overlayResult.imageBytes())   // ← composed image
+                    .imageBase64(Base64.getEncoder().encodeToString(imageUrl.getBytes()))
                     .build();
         }
 
