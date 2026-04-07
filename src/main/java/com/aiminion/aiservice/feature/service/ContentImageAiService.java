@@ -49,6 +49,16 @@ public class ContentImageAiService
                     .provider(request.provider())
                     .logoUrl(req.logoUrl())
                     .photoUrl(req.photoUrl())
+
+                    .logoPosition(req.logoPosition())
+                    .logoWidth(req.logoWidth())
+                    .logoHeight(req.logoHeight())
+                    .logoMargin(req.logoMargin())
+
+                    .photoPosition(req.photoPosition())
+                    .photoUrl(req.photoUrl())
+                    .photoWidth(req.photoWidth())
+                    .photoHeight(req.photoHeight())
                     .build();
         }
 
@@ -76,6 +86,17 @@ public class ContentImageAiService
                     .baseImageUrl(imageUrl)
                     .logoUrl(req.logoUrl())
                     .photoUrl(req.photoUrl())
+
+                    // pass through — null means "use config default"
+                    .logoPosition(req.logoPosition())
+                    .logoWidth(req.logoWidth())
+                    .logoHeight(req.logoHeight())
+                    .logoMargin(req.logoMargin())
+
+                    .photoPosition(req.photoPosition())
+                    .photoWidth(req.photoWidth())
+                    .photoHeight(req.photoHeight())
+                    .photoMargin(req.photoMargin())
                     .build();
 
             OverlayResult overlayResult = imageOverlayService.compose(overlayRequest);

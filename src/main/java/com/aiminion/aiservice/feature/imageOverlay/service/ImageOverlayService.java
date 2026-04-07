@@ -38,30 +38,32 @@ public class ImageOverlayService {
             Graphics2D    g2d  = base.createGraphics();
 
             // ── Enable antialiasing for smooth edges ──────────────────────────
-            g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING,        RenderingHints.VALUE_ANTIALIAS_ON);
-            g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION,       RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-            g2d.setRenderingHint(RenderingHints.KEY_RENDERING,           RenderingHints.VALUE_RENDER_QUALITY);
+            g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING,   RenderingHints.VALUE_ANTIALIAS_ON);
+            g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION,  RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+            g2d.setRenderingHint(RenderingHints.KEY_RENDERING,      RenderingHints.VALUE_RENDER_QUALITY);
 
             // ── Overlay logo ──────────────────────────────────────────────────
             if (request.logoUrl() != null && !request.logoUrl().isBlank()) {
-                log.info("[ImageOverlay] Overlaying logo at position={}",
-                        overlayConfig.getLogo().getPosition());
+                ImageOverlayConfig.Logo cfg = overlayConfig.getLogo();   // ← Logo, not OverlayItem
+                String position = resolve(request.logoPosition(), cfg.getPosition());
+                log.info("[ImageOverlay] Overlaying logo at position={}", position);
                 overlayImage(g2d, base, request.logoUrl(),
-                        overlayConfig.getLogo().getWidth(),
-                        overlayConfig.getLogo().getHeight(),
-                        overlayConfig.getLogo().getMargin(),
-                        overlayConfig.getLogo().getPosition());
+                        resolve(request.logoWidth(),  cfg.getWidth()),
+                        resolve(request.logoHeight(), cfg.getHeight()),
+                        resolve(request.logoMargin(), cfg.getMargin()),
+                        position);
             }
 
             // ── Overlay photo ─────────────────────────────────────────────────
             if (request.photoUrl() != null && !request.photoUrl().isBlank()) {
-                log.info("[ImageOverlay] Overlaying photo at position={}",
-                        overlayConfig.getPhoto().getPosition());
+                ImageOverlayConfig.Photo cfg = overlayConfig.getPhoto();  // ← Photo, not OverlayItem
+                String position = resolve(request.photoPosition(), cfg.getPosition());
+                log.info("[ImageOverlay] Overlaying photo at position={}", position);
                 overlayImage(g2d, base, request.photoUrl(),
-                        overlayConfig.getPhoto().getWidth(),
-                        overlayConfig.getPhoto().getHeight(),
-                        overlayConfig.getPhoto().getMargin(),
-                        overlayConfig.getPhoto().getPosition());
+                        resolve(request.photoWidth(),  cfg.getWidth()),
+                        resolve(request.photoHeight(), cfg.getHeight()),
+                        resolve(request.photoMargin(), cfg.getMargin()),
+                        position);
             }
 
             g2d.dispose();
@@ -81,6 +83,18 @@ public class ImageOverlayService {
             log.error("[ImageOverlay] Composition failed: {}", ex.getMessage(), ex);
             throw new RuntimeException("Image composition failed. Please try again.");
         }
+    }
+
+// ── Resolver helpers ──────────────────────────────────────────────────────────
+
+    /** Uses user-supplied int if present, otherwise falls back to config default. */
+    private int resolve(Integer userValue, int configDefault) {
+        return userValue != null ? userValue : configDefault;
+    }
+
+    /** Uses user-supplied String if non-blank, otherwise falls back to config default. */
+    private String resolve(String userValue, String configDefault) {
+        return (userValue != null && !userValue.isBlank()) ? userValue : configDefault;
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

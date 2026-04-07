@@ -97,36 +97,52 @@ public class AiController {
 													  "featureType": "GENERATE_CONTENT_IMAGE",
 													  "provider": "OPENAI",
 													  "payload": {
-													    "prompt": "A peaceful Myanmar village at sunset",
-													    "size": "1024x1024",
-													    "quality": "standard",
-													    "logoUrl":  "https://fastly.picsum.photos/id/866/200/300.jpg?hmac=rcadCENKh4rD6MAp6V_ma-AyWv641M4iiOpe1RyFHeI",
-													  	"photoUrl": "https://fastly.picsum.photos/id/866/200/300.jpg?hmac=rcadCENKh4rD6MAp6V_ma-AyWv641M4iiOpe1RyFHeI"
+														"prompt": "A peaceful Myanmar village at sunset",
+														"size": "1024x1024",
+														"quality": "standard",
+														"logoUrl":   "https://fastly.picsum.photos/id/866/200/300.jpg?hmac=rcadCENKh4rD6MAp6V_ma-AyWv641M4iiOpe1RyFHeI",
+														"photoUrl":  "https://fastly.picsum.photos/id/866/200/300.jpg?hmac=rcadCENKh4rD6MAp6V_ma-AyWv641M4iiOpe1RyFHeI",
+														"logoPosition":  "TOP_RIGHT",
+														"logoWidth":     120,
+														"logoHeight":    120,
+														"logoMargin":    20,
+														"photoPosition": "BOTTOM_LEFT",
+														"photoWidth":    150,
+														"photoHeight":   150,
+														"photoMargin":   20
 													  }
 													}
 													"""
-									),
-									@ExampleObject(
-											name = "Generate Text + Image",
-											summary = "Generate both text and image",
-											value = """
+																			),
+																			@ExampleObject(
+																					name = "Generate Text + Image",
+																					summary = "Generate both text and image",
+																					value = """
 													{
 													  "featureType": "GENERATE_CONTENT",
 													  "provider": "OPENAI",
 													  "payload": {
-													    "topic": "Importance of sleep",
-													    "contentType": "Script",
-													    "sourceLanguage": "English",
-													    "targetLanguage": "Myanmar",
-													    "style": "Formal",
-													    "imageSize": "1024x1024",
-													    "imageQuality": "standard",
-													    "logoUrl":  "https://fastly.picsum.photos/id/866/200/300.jpg?hmac=rcadCENKh4rD6MAp6V_ma-AyWv641M4iiOpe1RyFHeI",
-													  	"photoUrl": "https://fastly.picsum.photos/id/866/200/300.jpg?hmac=rcadCENKh4rD6MAp6V_ma-AyWv641M4iiOpe1RyFHeI"
+														"topic": "Importance of sleep",
+														"contentType": "Script",
+														"sourceLanguage": "English",
+														"targetLanguage": "Myanmar",
+														"style": "Formal",
+														"imageSize": "1024x1024",
+														"imageQuality": "standard",
+														"logoUrl":   "https://fastly.picsum.photos/id/866/200/300.jpg?hmac=rcadCENKh4rD6MAp6V_ma-AyWv641M4iiOpe1RyFHeI",
+														"photoUrl":  "https://fastly.picsum.photos/id/866/200/300.jpg?hmac=rcadCENKh4rD6MAp6V_ma-AyWv641M4iiOpe1RyFHeI",
+														"logoPosition":  "TOP_RIGHT",
+														"logoWidth":     120,
+														"logoHeight":    120,
+														"logoMargin":    20,
+														"photoPosition": "BOTTOM_LEFT",
+														"photoWidth":    150,
+														"photoHeight":   150,
+														"photoMargin":   20
 													  }
 													}
 													"""
-									)
+																			)
 							}
 					)
 			)
