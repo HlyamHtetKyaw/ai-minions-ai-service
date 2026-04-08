@@ -1,5 +1,6 @@
 package com.aiminion.aiservice.feature.service;
 import com.aiminion.aiservice.common.ai.generator.AiContentImageGenerator;
+import com.aiminion.aiservice.common.ai.generator.GeminiImagenImageGenerator;
 import com.aiminion.aiservice.common.ai.handler.AiFeatureHandler;
 import com.aiminion.aiservice.common.ai.request.AiGenerateRequest;
 import com.aiminion.aiservice.common.ai.response.AiGenerateResponse;
@@ -22,6 +23,7 @@ public class ContentImageAiService
         AiFeatureHandler {
 
     private final AiContentImageGenerator aiContentImageGenerator;
+    private final GeminiImagenImageGenerator geminiImagenImageGenerator;
 
     private static final String DEFAULT_SIZE    = "1024x1024";
     private static final String DEFAULT_QUALITY = "standard";
@@ -58,18 +60,45 @@ public class ContentImageAiService
         String size    = isBlank(req.size())    ? DEFAULT_SIZE    : req.size().trim();
         String quality = isBlank(req.quality()) ? DEFAULT_QUALITY : req.quality().trim();
 
-        log.info("[ContentImage] Generating image — size={} quality={}", size, quality);
+        AiProvider provider = req.provider() != null ? req.provider() : AiProvider.OPENAI;
+        log.info("[ContentImage] Generating image — provider={} size={} quality={}", provider, size, quality);
 
-        String imageUrl  = aiContentImageGenerator.generateImage(req.prompt(), size, quality);
+        String imageUrl;
         String imageName = aiContentImageGenerator.generateImageName();
+        if (provider == AiProvider.GEMINI) {
+            String aspectRatio = mapSizeToAspectRatio(size);
+            String imageSize = mapQualityToImageSize(quality);
+            imageUrl = geminiImagenImageGenerator.generateImageDataUrl(req.prompt(), aspectRatio, imageSize);
+        } else {
+            imageUrl = aiContentImageGenerator.generateImageWithOpenAi(req.prompt(), size, quality);
+        }
 
         return ContentImageResponse.builder()
                 .imageUrl(imageUrl)
                 .imageName(imageName)
                 .prompt(req.prompt())
-                .usedProvider(AiProvider.OPENAI)   // DALL-E is OpenAI only
+                .usedProvider(provider)
                 .build();
     }
 
     private boolean isBlank(String s) { return s == null || s.isBlank(); }
+
+    private static String mapSizeToAspectRatio(String size) {
+        // OpenAI sizes are WxH. Imagen expects aspect ratios like "1:1", "16:9", etc.
+        if (size == null) return "1:1";
+        String s = size.trim().toLowerCase();
+        return switch (s) {
+            case "1024x1024", "512x512" -> "1:1";
+            case "1024x1792", "768x1344" -> "9:16";
+            case "1792x1024", "1344x768" -> "16:9";
+            default -> "1:1";
+        };
+    }
+
+    private static String mapQualityToImageSize(String quality) {
+        // Imagen API commonly uses "1K" or "2K".
+        if (quality == null) return "1K";
+        String q = quality.trim().toLowerCase();
+        return "hd".equals(q) ? "2K" : "1K";
+    }
 }

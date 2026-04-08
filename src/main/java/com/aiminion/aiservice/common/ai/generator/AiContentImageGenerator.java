@@ -32,7 +32,7 @@ public class AiContentImageGenerator {
         this.restTemplate = restTemplate;
     }
 
-    public String generateImage(String prompt, String size, String quality) {
+    public String generateImageWithOpenAi(String prompt, String size, String quality) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(apiKey);
