@@ -15,12 +15,6 @@ import org.springframework.web.client.RestTemplate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-/**
- * Gemini API Imagen image generation via REST.
- *
- * Spring AI (1.1.x) does not yet provide a Google GenAI ImageModel, so we call the Imagen endpoint directly.
- * Returns a {@code data:image/png;base64,...} URL so clients can display the image without extra storage.
- */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -74,7 +68,6 @@ public class GeminiImagenImageGenerator {
 			if (root == null) {
 				throw new IllegalStateException("Empty response from Gemini Imagen");
 			}
-			// Common shape: { "predictions": [ { "bytesBase64Encoded": "..." } ] }
 			Object predsObj = root.get("predictions");
 			if (!(predsObj instanceof List<?> preds) || preds.isEmpty()) {
 				throw new IllegalStateException("Gemini Imagen response missing predictions");
@@ -85,11 +78,9 @@ public class GeminiImagenImageGenerator {
 			}
 			Object bytesObj = firstMap.get("bytesBase64Encoded");
 			if (!(bytesObj instanceof String b64) || b64.isBlank()) {
-				// Some variants use "bytesBase64Encoded" nested or different keys; log a hint.
 				log.error("[GeminiImagen] Unexpected response keys: {}", firstMap.keySet());
 				throw new IllegalStateException("Gemini Imagen response missing bytesBase64Encoded");
 			}
-			// Validate base64 quickly (throws if invalid)
 			Base64.getDecoder().decode(b64);
 			return "data:image/png;base64," + b64.trim();
 		} catch (Exception ex) {
