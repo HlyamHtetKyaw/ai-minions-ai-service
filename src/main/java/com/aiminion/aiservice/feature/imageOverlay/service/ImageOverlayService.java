@@ -16,7 +16,12 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.Base64;
+import java.util.List;
+import java.util.ArrayList;
 
 /**
  * Handles image composition — overlays logo and photo on a base image.
@@ -31,7 +36,7 @@ public class ImageOverlayService {
 
     public OverlayResult compose(OverlayRequest request) {
         try {
-            log.info("[ImageOverlay] Composing image from URL='{}'", request.baseImageUrl());
+//            log.info("[ImageOverlay] Composing image from URL='{}'", request.baseImageUrl());
 
             // ── Load base image ───────────────────────────────────────────────
             BufferedImage base = loadImageFromUrl(request.baseImageUrl());
@@ -47,11 +52,16 @@ public class ImageOverlayService {
                 ImageOverlayConfig.Logo cfg = overlayConfig.getLogo();   // ← Logo, not OverlayItem
                 String position = resolve(request.logoPosition(), cfg.getPosition());
                 log.info("[ImageOverlay] Overlaying logo at position={}", position);
-                overlayImage(g2d, base, request.logoUrl(),
-                        resolve(request.logoWidth(),  cfg.getWidth()),
-                        resolve(request.logoHeight(), cfg.getHeight()),
-                        resolve(request.logoMargin(), cfg.getMargin()),
-                        position);
+                try {
+                    overlayImage(g2d, base, request.logoUrl(),
+                            resolve(request.logoWidth(),  cfg.getWidth()),
+                            resolve(request.logoHeight(), cfg.getHeight()),
+                            resolve(request.logoMargin(), cfg.getMargin()),
+                            position);
+                } catch (IOException ex) {
+                    // Logo is optional. Keep generation resilient even when uploaded format is unsupported.
+                    log.warn("[ImageOverlay] Skipping logo overlay: {}", ex.getMessage());
+                }
             }
 
             // ── Overlay photo ─────────────────────────────────────────────────
@@ -59,11 +69,30 @@ public class ImageOverlayService {
                 ImageOverlayConfig.Photo cfg = overlayConfig.getPhoto();  // ← Photo, not OverlayItem
                 String position = resolve(request.photoPosition(), cfg.getPosition());
                 log.info("[ImageOverlay] Overlaying photo at position={}", position);
-                overlayImage(g2d, base, request.photoUrl(),
-                        resolve(request.photoWidth(),  cfg.getWidth()),
-                        resolve(request.photoHeight(), cfg.getHeight()),
-                        resolve(request.photoMargin(), cfg.getMargin()),
-                        position);
+                try {
+                    overlayImage(g2d, base, request.photoUrl(),
+                            resolve(request.photoWidth(),  cfg.getWidth()),
+                            resolve(request.photoHeight(), cfg.getHeight()),
+                            resolve(request.photoMargin(), cfg.getMargin()),
+                            position);
+                } catch (IOException ex) {
+                    // Photo is optional. Continue with base image and text when decoding fails.
+                    log.warn("[ImageOverlay] Skipping photo overlay: {}", ex.getMessage());
+                }
+            }
+
+            // ── Overlay caption text (AI and/or user) ─────────────────────────
+            boolean hasAiText = request.aiShortText() != null && !request.aiShortText().isBlank();
+            boolean hasUserText = request.userShortText() != null && !request.userShortText().isBlank();
+            boolean hasLegacyText = request.shortText() != null && !request.shortText().isBlank();
+            if (hasAiText || hasUserText || hasLegacyText) {
+                overlayShortText(
+                        g2d,
+                        base,
+                        hasAiText ? request.aiShortText() : (hasLegacyText ? request.shortText() : null),
+                        request.userShortText(),
+                        request.textPosition()
+                );
             }
 
             g2d.dispose();
@@ -72,7 +101,7 @@ public class ImageOverlayService {
             byte[] imageBytes = toBytes(base);
             String imageName  = "composed_" + Instant.now().getEpochSecond() + ".png";
 
-            log.info("[ImageOverlay] Composition complete — file={}", imageName);
+//            log.info("[ImageOverlay] Composition complete — file={}", imageName);
 
             return OverlayResult.builder()
                     .imageBytes(imageBytes)
@@ -145,6 +174,9 @@ public class ImageOverlayService {
     }
 
     private BufferedImage loadImageFromUrl(String url) throws IOException {
+        if (url.startsWith("data:image")) {
+            return loadImageFromDataUri(url);
+        }
         URL imageUrl = URI.create(url).toURL();
         HttpURLConnection conn = (HttpURLConnection) imageUrl.openConnection();
 
@@ -173,4 +205,210 @@ public class ImageOverlayService {
         ImageIO.write(image, "PNG", baos);
         return baos.toByteArray();
     }
+
+    private BufferedImage loadImageFromDataUri(String dataUri) throws IOException {
+        int comma = dataUri.indexOf(',');
+        if (comma < 0) {
+            throw new IOException("Invalid data URI image");
+        }
+        String metadata = dataUri.substring(0, comma);
+        String payload = dataUri.substring(comma + 1);
+        String mimeType = extractMimeType(metadata);
+        boolean isBase64 = metadata.toLowerCase().contains(";base64");
+
+        byte[] bytes = decodeDataUriPayload(payload, isBase64);
+        try (InputStream is = new java.io.ByteArrayInputStream(bytes)) {
+            BufferedImage img = ImageIO.read(is);
+            if (img == null) {
+                throw new IOException("Unsupported or invalid data URI image bytes (mime=%s)".formatted(mimeType));
+            }
+            return img;
+        }
+    }
+
+    private byte[] decodeDataUriPayload(String payload, boolean isBase64) {
+        if (!isBase64) {
+            String decoded = URLDecoder.decode(payload, StandardCharsets.UTF_8);
+            return decoded.getBytes(StandardCharsets.UTF_8);
+        }
+
+        String compact = payload.replaceAll("\\s+", "");
+        try {
+            return Base64.getMimeDecoder().decode(compact);
+        } catch (IllegalArgumentException ex) {
+            // Some clients may emit URL-safe Base64 in data URIs.
+            return Base64.getUrlDecoder().decode(compact);
+        }
+    }
+
+    private String extractMimeType(String metadata) {
+        if (!metadata.startsWith("data:")) {
+            return "unknown";
+        }
+        int semi = metadata.indexOf(';');
+        if (semi < 0) {
+            return metadata.substring("data:".length());
+        }
+        return metadata.substring("data:".length(), semi);
+    }
+
+    private void overlayShortText(Graphics2D g2d, BufferedImage base, String aiText, String userText, String textPosition) {
+        String ai = aiText == null ? "" : aiText.trim();
+        String user = userText == null ? "" : userText.trim();
+        int width = base.getWidth();
+        int height = base.getHeight();
+        int fontSize = Math.max(30, width / 16);
+        Font font = resolveFontForText(ai + user, fontSize);
+        g2d.setFont(font);
+
+        FontMetrics fm = g2d.getFontMetrics();
+        int sidePadding = Math.max(20, width / 28);
+        int maxTextWidth = width - (sidePadding * 2);
+        List<StyledLine> styledLines = new ArrayList<>();
+        if (!ai.isBlank()) {
+            for (String line : wrapText(ai, fm, maxTextWidth, 2)) {
+                styledLines.add(new StyledLine(line, Color.WHITE));
+            }
+        }
+        if (!user.isBlank()) {
+            for (String line : wrapText(user, fm, maxTextWidth, 2)) {
+                styledLines.add(new StyledLine(line, new Color(255, 196, 246)));
+            }
+        }
+        if (styledLines.isEmpty()) {
+            return;
+        }
+        if (styledLines.size() > 4) {
+            styledLines = new ArrayList<>(styledLines.subList(0, 4));
+        }
+
+        int lineHeight = fm.getHeight();
+        int blockHeight = lineHeight * styledLines.size();
+        int yBase = resolveTextY(textPosition, height, fm, blockHeight);
+
+        int bgPaddingX = 16;
+        int bgPaddingY = 10;
+        int boxY = yBase - fm.getAscent() - bgPaddingY;
+        int boxHeight = blockHeight + (bgPaddingY * 2);
+        g2d.setColor(new Color(0, 0, 0, 120));
+        g2d.fillRoundRect(
+                sidePadding - bgPaddingX,
+                boxY,
+                maxTextWidth + (bgPaddingX * 2),
+                boxHeight,
+                18,
+                18
+        );
+
+        for (int i = 0; i < styledLines.size(); i++) {
+            StyledLine styledLine = styledLines.get(i);
+            String line = styledLine.text();
+            int lineWidth = fm.stringWidth(line);
+            int x = Math.max(sidePadding, (width - lineWidth) / 2);
+            int y = yBase + (i * lineHeight);
+
+            // Draw black outline for readability on bright backgrounds.
+            g2d.setColor(Color.BLACK);
+            for (int dx = -2; dx <= 2; dx++) {
+                for (int dy = -2; dy <= 2; dy++) {
+                    if (dx == 0 && dy == 0) {
+                        continue;
+                    }
+                    g2d.drawString(line, x + dx, y + dy);
+                }
+            }
+            g2d.setColor(styledLine.color());
+            g2d.drawString(line, x, y);
+        }
+    }
+
+    private Font resolveFontForText(String text, int fontSize) {
+        List<String> preferredFonts = List.of(
+                "Myanmar Text",
+                "Noto Sans Myanmar",
+                "Pyidaungsu",
+                "Arial Unicode MS",
+                "Arial"
+        );
+        for (String family : preferredFonts) {
+            Font candidate = new Font(family, Font.BOLD, fontSize);
+            if (candidate.canDisplayUpTo(text) == -1) {
+                return candidate;
+            }
+        }
+        return new Font(Font.SANS_SERIF, Font.BOLD, fontSize);
+    }
+
+    private int resolveTextY(String textPosition, int height, FontMetrics fm, int blockHeight) {
+        String pos = (textPosition == null || textPosition.isBlank())
+                ? "BOTTOM"
+                : textPosition.trim().toUpperCase();
+        return switch (pos) {
+            case "TOP" -> Math.max(fm.getAscent() + 24, 36);
+            case "CENTER" -> (height - blockHeight) / 2 + fm.getAscent();
+            default -> height - Math.max(30, fm.getDescent() + 28) - blockHeight + fm.getAscent();
+        };
+    }
+
+    private List<String> wrapText(String text, FontMetrics fm, int maxWidth, int maxLines) {
+        List<String> lines = new ArrayList<>();
+        if (text == null || text.isBlank()) {
+            lines.add("");
+            return lines;
+        }
+
+        boolean hasSpaces = text.contains(" ");
+        if (hasSpaces) {
+            String[] words = text.split("\\s+");
+            StringBuilder current = new StringBuilder();
+            for (String word : words) {
+                String candidate = current.isEmpty() ? word : current + " " + word;
+                if (fm.stringWidth(candidate) <= maxWidth) {
+                    current.setLength(0);
+                    current.append(candidate);
+                } else {
+                    if (!current.isEmpty()) {
+                        lines.add(current.toString());
+                    }
+                    current.setLength(0);
+                    current.append(word);
+                }
+                if (lines.size() >= maxLines) {
+                    break;
+                }
+            }
+            if (!current.isEmpty() && lines.size() < maxLines) {
+                lines.add(current.toString());
+            }
+        } else {
+            StringBuilder current = new StringBuilder();
+            for (int i = 0; i < text.length(); i++) {
+                current.append(text.charAt(i));
+                if (fm.stringWidth(current.toString()) > maxWidth) {
+                    current.deleteCharAt(current.length() - 1);
+                    if (!current.isEmpty()) {
+                        lines.add(current.toString());
+                    }
+                    current.setLength(0);
+                    current.append(text.charAt(i));
+                }
+                if (lines.size() >= maxLines) {
+                    break;
+                }
+            }
+            if (!current.isEmpty() && lines.size() < maxLines) {
+                lines.add(current.toString());
+            }
+        }
+
+        if (lines.isEmpty()) {
+            lines.add(text);
+        }
+        if (lines.size() > maxLines) {
+            return lines.subList(0, maxLines);
+        }
+        return lines;
+    }
+
+    private record StyledLine(String text, Color color) {}
 }

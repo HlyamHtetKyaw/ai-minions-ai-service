@@ -40,7 +40,9 @@ public class AiController {
 					+ "- TRANSLATE\n"
 					+ "- GENERATE_CONTENT_TEXT\n"
 					+ "- GENERATE_CONTENT_IMAGE\n"
-					+ "- GENERATE_CONTENT (Both Image and Text)\n\n"
+					+ "- GENERATE_CONTENT (Both Image and Text)\n"
+					+ "- GENERATE_CONTENT_IMAGE_V2 (Gemini toon image with short text)\n"
+					+ "- GENERATE_CONTENT_V2 (Gemini image + text)\n\n"
 					+ "(TRANSCRIBE is not available as JSON-only; use multipart below.)\n\n"
 					+ "TRANSCRIBE: use multipart POST /generate with `request` (JSON) + `audio` (binary) parts — not this JSON endpoint."
 	)

@@ -10,6 +10,10 @@ public record OverlayRequest(
         String baseImageUrl,    // AI-generated image URL
         String logoUrl,         // logo to overlay (nullable)
         String photoUrl,        // person/brand photo to overlay (nullable)
+        String shortText,       // short caption text (nullable)
+        String aiShortText,     // AI-generated short caption (nullable)
+        String userShortText,   // user-provided short caption (nullable)
+        String textPosition,    // TOP/BOTTOM/CENTER (nullable)
 
         // Optional overlay config from user
         String  logoPosition,
