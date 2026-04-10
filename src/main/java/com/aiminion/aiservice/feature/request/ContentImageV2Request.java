@@ -1,7 +1,7 @@
 package com.aiminion.aiservice.feature.request;
 
 import com.aiminion.aiservice.common.enums.AiProvider;
-import com.aiminion.aiservice.common.swagger.AiPayload;
+//import com.aiminion.aiservice.common.swagger.AiPayload;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Builder;
@@ -50,4 +50,4 @@ public record ContentImageV2Request(
         Integer photoWidth,
         Integer photoHeight,
         Integer photoMargin
-) implements AiPayload {}
+){}

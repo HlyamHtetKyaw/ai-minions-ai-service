@@ -47,6 +47,7 @@ public class ContentTextAiService
                     .sourceLanguage(req.sourceLanguage())
                     .targetLanguage(req.targetLanguage())
                     .style(req.style())
+                    .textLength(req.textLength())
                     .provider(request.provider())
                     .build();
         }
@@ -66,11 +67,12 @@ public class ContentTextAiService
         String target = isBlank(req.targetLanguage()) ? DEFAULT_TARGET : req.targetLanguage().trim();
         String contentType = isBlank(req.contentType()) ? DEFAULT_CONTENT_TYPE : req.contentType().trim();
         String style  = isBlank(req.style())          ? DEFAULT_STYLE  : req.style().trim();
+        String textLength = isBlank(req.textLength()) ? "SHORT" : req.textLength().trim();
 
-        log.info("[ContentText] {}→{} style={}", source, target, style);
+        log.info("[ContentText] {}→{} type={} length={} style={}", source, target, contentType, textLength, style);
 
         AiRequest aiRequest = AiRequest.builder()
-                .systemPrompt(promptBuilderImpl.buildContentTextPrompt(source, target, contentType, style))
+                .systemPrompt(promptBuilderImpl.buildContentTextPrompt(source, target, contentType, style, textLength))
                 .userMessage(req.topic())
                 .provider(req.provider())
                 .build();

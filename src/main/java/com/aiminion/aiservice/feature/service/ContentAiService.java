@@ -41,25 +41,25 @@ public class ContentAiService
         if (request.provider() != null) {
             req = ContentRequest.builder()
                     .topic(req.topic())
-                    .contentType(req.contentType())
+//                    .contentType(req.contentType())
                     .sourceLanguage(req.sourceLanguage())
                     .targetLanguage(req.targetLanguage())
                     .style(req.style())
                     .imageSize(req.imageSize())
                     .imageQuality(req.imageQuality())
-                    .logoUrl(req.logoUrl())
-                    .photoUrl(req.photoUrl())
-                    .provider(request.provider())
-
-                    .logoPosition(req.logoPosition())
-                    .logoWidth(req.logoWidth())
-                    .logoHeight(req.logoHeight())
-                    .logoMargin(req.logoMargin())
-
-                    .photoPosition(req.photoPosition())
-                    .photoUrl(req.photoUrl())
-                    .photoWidth(req.photoWidth())
-                    .photoHeight(req.photoHeight())
+//                    .logoUrl(req.logoUrl())
+//                    .photoUrl(req.photoUrl())
+//                    .provider(request.provider())
+//
+//                    .logoPosition(req.logoPosition())
+//                    .logoWidth(req.logoWidth())
+//                    .logoHeight(req.logoHeight())
+//                    .logoMargin(req.logoMargin())
+//
+//                    .photoPosition(req.photoPosition())
+//                    .photoUrl(req.photoUrl())
+//                    .photoWidth(req.photoWidth())
+//                    .photoHeight(req.photoHeight())
                     .build();
         }
 
@@ -78,10 +78,11 @@ public class ContentAiService
 
         ContentTextRequest textRequest = ContentTextRequest.builder()
                 .topic(req.topic())
-                .contentType(req.contentType())
+//                .contentType(req.contentType())
                 .sourceLanguage(req.sourceLanguage())
                 .targetLanguage(req.targetLanguage())
                 .style(req.style())
+                .textLength(null)
                 .provider(req.provider())
                 .build();
 
@@ -96,18 +97,18 @@ public class ContentAiService
                 .size(req.imageSize())
                 .quality(req.imageQuality())
                 .provider(req.provider())
-                .logoUrl(req.logoUrl())
-                .photoUrl(req.photoUrl())
-
-                .logoPosition(req.logoPosition())
-                .logoWidth(req.logoWidth())
-                .logoHeight(req.logoHeight())
-                .logoMargin(req.logoMargin())
-
-                .photoPosition(req.photoPosition())
-                .photoUrl(req.photoUrl())
-                .photoWidth(req.photoWidth())
-                .photoHeight(req.photoHeight())
+//                .logoUrl(req.logoUrl())
+//                .photoUrl(req.photoUrl())
+//
+//                .logoPosition(req.logoPosition())
+//                .logoWidth(req.logoWidth())
+//                .logoHeight(req.logoHeight())
+//                .logoMargin(req.logoMargin())
+//
+//                .photoPosition(req.photoPosition())
+//                .photoUrl(req.photoUrl())
+//                .photoWidth(req.photoWidth())
+//                .photoHeight(req.photoHeight())
                 .build();
 
         ContentImageResponse image = contentImageAiService.generate(imageRequest);

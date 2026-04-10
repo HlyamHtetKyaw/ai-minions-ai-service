@@ -1,7 +1,7 @@
 package com.aiminion.aiservice.feature.request;
 
 import com.aiminion.aiservice.common.enums.AiProvider;
-import com.aiminion.aiservice.common.swagger.AiPayload;
+//import com.aiminion.aiservice.common.swagger.AiPayload;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Builder;
@@ -56,6 +56,9 @@ public record ContentV2Request(
         @Schema(example = "GEMINI")
         AiProvider provider,
 
+        @Schema(description = "imageAndText (default), imageOnly handled elsewhere, or textOnly for copy without image")
+        String outputMode,
+
         String logoPosition,
         Integer logoWidth,
         Integer logoHeight,
@@ -65,4 +68,4 @@ public record ContentV2Request(
         Integer photoWidth,
         Integer photoHeight,
         Integer photoMargin
-) implements AiPayload {}
+){}

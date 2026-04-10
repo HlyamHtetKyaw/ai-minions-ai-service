@@ -16,6 +16,9 @@ public record ContentTextRequest(
 
         String style,
 
+        /** SHORT or LONG — controls depth while keeping {@link #contentType} (hook, caption, script, …). */
+        String textLength,
+
         AiProvider provider
 
 ) {}

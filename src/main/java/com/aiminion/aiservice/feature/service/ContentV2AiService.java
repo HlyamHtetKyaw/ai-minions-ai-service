@@ -47,16 +47,38 @@ public class ContentV2AiService
 
     @Override
     public ContentV2Response generate(ContentV2Request req) {
+        if (req.outputMode() != null && "textOnly".equalsIgnoreCase(req.outputMode().trim())) {
+            boolean longText = TEXT_LENGTH_LONG.equalsIgnoreCase(req.textLength());
+            String style = normalizeStyleByTextLength(req.style(), longText);
+
+            ContentTextRequest textReq = ContentTextRequest.builder()
+                    .topic(req.topic())
+                    .contentType(req.contentType())
+                    .sourceLanguage(resolveLanguage(req.sourceLanguage()))
+                    .targetLanguage(resolveLanguage(req.targetLanguage()))
+                    .style(style)
+                    .textLength(req.textLength())
+                    .provider(AiProvider.GEMINI)
+                    .build();
+            ContentTextResponse text = contentTextAiService.generate(textReq);
+
+            return ContentV2Response.builder()
+                    .text(text)
+                    .image(null)
+                    .usedProvider(AiProvider.GEMINI)
+                    .build();
+        }
+
         boolean longText = TEXT_LENGTH_LONG.equalsIgnoreCase(req.textLength());
-        String contentType = longText ? "BLOG" : req.contentType();
         String style = normalizeStyleByTextLength(req.style(), longText);
 
         ContentTextRequest textReq = ContentTextRequest.builder()
                 .topic(req.topic())
-                .contentType(contentType)
+                .contentType(req.contentType())
                 .sourceLanguage(resolveLanguage(req.sourceLanguage()))
                 .targetLanguage(resolveLanguage(req.targetLanguage()))
                 .style(style)
+                .textLength(req.textLength())
                 .provider(AiProvider.GEMINI)
                 .build();
         ContentTextResponse text = contentTextAiService.generate(textReq);
@@ -119,8 +141,8 @@ public class ContentV2AiService
     private String normalizeStyleByTextLength(String style, boolean longText) {
         String base = isBlank(style) ? "Professional" : style.trim();
         if (!longText) {
-            return base + " | concise output (1-2 lines)";
+            return base + " | keep length tight for the selected content type.";
         }
-        return base + " | detailed long-form output";
+        return base + " | go deeper per the content-type instructions (stay on-format; do not switch to an unrelated genre).";
     }
 }
