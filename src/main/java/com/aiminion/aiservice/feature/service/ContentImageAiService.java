@@ -8,12 +8,17 @@ import com.aiminion.aiservice.common.enums.AiProvider;
 import com.aiminion.aiservice.common.enums.FeatureType;
 import com.aiminion.aiservice.feature.BaseAiServiceGenerator;
 
+import com.aiminion.aiservice.feature.imageOverlay.request.OverlayRequest;
+import com.aiminion.aiservice.feature.imageOverlay.response.OverlayResult;
+import com.aiminion.aiservice.feature.imageOverlay.service.ImageOverlayService;
 import com.aiminion.aiservice.feature.request.ContentImageRequest;
 import com.aiminion.aiservice.feature.response.ContentImageResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+
+import java.util.Base64;
 
 @Slf4j
 @Service
@@ -43,6 +48,18 @@ public class ContentImageAiService
                     .size(req.size())
                     .quality(req.quality())
                     .provider(request.provider())
+//                    .logoUrl(req.logoUrl())
+//                    .photoUrl(req.photoUrl())
+//
+//                    .logoPosition(req.logoPosition())
+//                    .logoWidth(req.logoWidth())
+//                    .logoHeight(req.logoHeight())
+//                    .logoMargin(req.logoMargin())
+//
+//                    .photoPosition(req.photoPosition())
+//                    .photoUrl(req.photoUrl())
+//                    .photoWidth(req.photoWidth())
+//                    .photoHeight(req.photoHeight())
                     .build();
         }
 
@@ -75,7 +92,7 @@ public class ContentImageAiService
 
         return ContentImageResponse.builder()
                 .imageUrl(imageUrl)
-                .imageName(imageName)
+                .imageName(aiContentImageGenerator.generateImageName())
                 .prompt(req.prompt())
                 .usedProvider(provider)
                 .build();

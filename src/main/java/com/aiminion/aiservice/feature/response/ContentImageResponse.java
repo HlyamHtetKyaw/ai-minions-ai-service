@@ -8,5 +8,7 @@ public record ContentImageResponse(
         String imageUrl,
         String imageName,
         String prompt,
+        byte[] imageBytes,
+        String imageBase64,
         AiProvider usedProvider
 ) {}

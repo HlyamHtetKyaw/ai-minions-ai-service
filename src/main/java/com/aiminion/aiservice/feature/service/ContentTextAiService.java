@@ -64,8 +64,8 @@ public class ContentTextAiService
     public ContentTextResponse generate(ContentTextRequest req) {
         String source = isBlank(req.sourceLanguage()) ? DEFAULT_SOURCE : req.sourceLanguage().trim();
         String target = isBlank(req.targetLanguage()) ? DEFAULT_TARGET : req.targetLanguage().trim();
-        String contentType = isBlank(req.contentType()) ? DEFAULT_STYLE : req.contentType().trim();
-        String style  = isBlank(req.style())          ? DEFAULT_CONTENT_TYPE  : req.style().trim();
+        String contentType = isBlank(req.contentType()) ? DEFAULT_CONTENT_TYPE : req.contentType().trim();
+        String style  = isBlank(req.style())          ? DEFAULT_STYLE  : req.style().trim();
 
         log.info("[ContentText] {}→{} style={}", source, target, style);
 
@@ -85,11 +85,12 @@ public class ContentTextAiService
 
         return ContentTextResponse.builder()
                 .title(title)
-                .generatedContent(content)
+                .contentType(contentType)
                 .generatedFrom(source)
                 .generatedTo(target)
                 .style(style)
                 .usedProvider(aiResponse.usedProvider())
+                .generatedContent(content)
                 .build();
     }
 

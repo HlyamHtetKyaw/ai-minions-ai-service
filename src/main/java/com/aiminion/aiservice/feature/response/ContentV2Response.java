@@ -4,10 +4,8 @@ import com.aiminion.aiservice.common.enums.AiProvider;
 import lombok.Builder;
 
 @Builder
-public record ContentResponse(
-        ContentTextResponse  text,
-        ContentImageResponse image,
-        byte[] imageBytes,
-        String imageBase64,
+public record ContentV2Response(
+        ContentTextResponse text,
+        ContentImageV2Response image,
         AiProvider usedProvider
 ) {}

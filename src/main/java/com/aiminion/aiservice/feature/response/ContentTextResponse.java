@@ -6,9 +6,10 @@ import lombok.Builder;
 @Builder
 public record ContentTextResponse(
         String title,
-        String generatedContent,
+        String contentType,
         String generatedFrom,
         String generatedTo,
         String style,
-        AiProvider usedProvider
+        AiProvider usedProvider,
+        String generatedContent
 ) {}
