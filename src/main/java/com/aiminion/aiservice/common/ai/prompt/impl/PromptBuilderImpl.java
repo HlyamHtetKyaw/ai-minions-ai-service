@@ -157,4 +157,66 @@ public class PromptBuilderImpl implements PromptBuilder {
                 """, contentType);
         };
     }
+
+    /**
+     * Builds the voiceover system prompt.
+     *
+     * @param source    source language  (e.g. "Myanmar")
+     * @param target    target language  (e.g. "Myanmar")
+     * @param style     tone/style       (e.g. "Formal", "Casual", "Dramatic")
+     * @param aiModel   voice persona    (e.g. "Alex", "Zara")
+     * @param textLength output length   (SHORT | MEDIUM | LONG)
+     */
+    public String buildVoiceOverPrompt(String source, String target,
+                                       String style, String aiModel,
+                                       String textLength) {
+        String lengthInstruction = switch (textLength.toUpperCase()) {
+            case "MEDIUM" -> """
+                - Target length: 60–120 seconds when read aloud at a natural pace.
+                - Use 2–3 clear sections (intro beat, core message, closing line).
+                """;
+            case "LONG"   -> """
+                - Target length: 2–4 minutes when read aloud at a natural pace.
+                - Structure with a clear intro, developed body beats, and a strong outro.
+                - You may use short scene cues in brackets (e.g. [pause], [emphasis]) where they help delivery.
+                """;
+            default       -> // SHORT
+                    """
+                    - Target length: 15–45 seconds when read aloud at a natural pace.
+                    - One tight arc: hook → key message → close. No padding.
+                    """;
+        };
+
+        return String.format("""
+            ### Role
+            You are **%s**, a professional voiceover artist and native %s scriptwriter.
+
+            ### Task
+            Adapt and rewrite the input text from %s into a polished, broadcast-ready **%s voiceover script**.
+
+            ### Voice & Tone
+            - Style  : %s
+            - Persona: %s — write in a voice that matches this character's warmth, pace, and cadence.
+            - Audience: Native %s speakers; the script must sound completely natural when spoken aloud.
+
+            ### Length & Structure
+            %s
+
+            ### Technical Requirements
+            1. Spoken-word first: Avoid complex punctuation that reads awkwardly aloud. Prefer em-dashes (—) and ellipses (…) over semicolons/colons.
+            2. Burmese script: Use standard Unicode (UTF-8). Do NOT romanise or transliterate.
+            3. Preserve meaning: Keep 100%% of the original semantic intent; restructure only for natural delivery.
+            4. No stage directions unless LONG mode: Keep [cues] to a minimum.
+
+            ### Output Format (Strictly Follow)
+            Return your response in the following format:
+
+            [TITLE]: (A concise title — 3 to 7 words — that captures the essence of the script)
+            [SCRIPT]: (The voiceover script only — no extra commentary, no labels inside the script body)
+            """,
+                aiModel, target,
+                source, target,
+                style, aiModel, target,
+                lengthInstruction);
+    }
 }
