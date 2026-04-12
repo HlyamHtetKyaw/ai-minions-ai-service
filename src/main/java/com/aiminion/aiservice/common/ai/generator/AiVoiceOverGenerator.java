@@ -14,13 +14,13 @@ public class AiVoiceOverGenerator {
 
     private final RestTemplate restTemplate;
 
-    @Value("${openai.api-key}")
+    @Value("${gemini.api-key}")
     private String apiKey;
 
-    @Value("${openai.tts-api-url:https://api.openai.com/v1/audio/speech}")
+    @Value("${google.tts-api-url:https://texttospeech.googleapis.com/v1/text:synthesize}")
     private String ttsApiUrl;
 
-    @Value("${openai.tts-model:tts-1}")
+    @Value("${gemini.tts-model:gemini-1.5-flash}")
     private String ttsModel;
 
     public AiVoiceOverGenerator(RestTemplate restTemplate) {
