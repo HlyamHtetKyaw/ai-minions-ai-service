@@ -62,7 +62,7 @@ public class VoiceOverAiService implements BaseAiServiceGenerator<VoiceOverReque
         VoiceOverResponse result = generate(req);
 
         return AiGenerateResponse.builder()
-                .featureType(FeatureType.GENERATE_CONTENT_TEXT)
+                .featureType(FeatureType.VOICEOVER)
                 .usedProvider(result.usedProvider())
                 .result(result)
                 .build();
@@ -76,28 +76,23 @@ public class VoiceOverAiService implements BaseAiServiceGenerator<VoiceOverReque
         String aiModel    = isBlank(req.aiModel())        ? DEFAULT_AI_MODEL    : req.aiModel().trim();
         String textLength = isBlank(req.textLength())     ? DEFAULT_TEXT_LENGTH : req.textLength().trim();
 
-        log.info("[VoiceOver] source={} target={} style={} voice={} textLength={}",
-                source, target, style, aiModel, textLength);
+        log.info("[VoiceOver] source={} target={} style={} voice={} textLength={} provider={}",
+                source, target, style, aiModel, textLength, req.provider());
 
-        // ── Step 1: Let LLM clean/enhance the script ─────────────────────────
-        // aiModel here is the TTS voice (alloy, nova, etc.)
-        // We use a separate text-model just for script refinement
-        String refinedScript = refineScript(req.text(), source, target, style, textLength , req.provider());
-
-        // ── Step 2: Send refined script to TTS ───────────────────────────────
         double speed = resolveSpeed(textLength);
-        byte[] audioBytes = aiVoiceOverGenerator.generateAudio(refinedScript, aiModel, speed);
 
-        // ── Step 3: Save audio and build response ─────────────────────────────
-        String audioUrl = audioStorageService.save(audioBytes); // see Note below
+        // provider=null → falls back to ai.tts-default-provider in AiVoiceOverGenerator
+        byte[] audioBytes = aiVoiceOverGenerator.generateAudio(req.provider(), req.text(), aiModel, speed);
+
+        String audioUrl = audioStorageService.save(audioBytes);
 
         return VoiceOverResponse.builder()
                 .audioUrl(audioUrl)
                 .sourceLanguage(source)
                 .targetLanguage(target)
                 .style(style)
-                .rawOutput(refinedScript)
-                .usedProvider(req.provider())
+                .rawOutput(req.text())
+                .usedProvider(req.provider() != null ? req.provider() : AiProvider.GEMINI)
                 .build();
     }
 
@@ -111,7 +106,7 @@ public class VoiceOverAiService implements BaseAiServiceGenerator<VoiceOverReque
                 .systemPrompt(promptBuilderImpl.buildVoiceOverPrompt(
                         source, target, style, DEFAULT_AI_MODEL, textLength))
                 .userMessage(text)
-                .provider(provider) // use default provider
+                .provider(provider)
                 .build();
 
         AiResponse refined = aiContentTextGenerator.generate(refineRequest);
@@ -133,7 +128,6 @@ public class VoiceOverAiService implements BaseAiServiceGenerator<VoiceOverReque
     }
 
     // ── helpers ──────────────────────────────────────────────────────────────
-
     private String resolve(String value, String fallback) {
         return (value == null || value.isBlank()) ? fallback : value.trim();
     }
