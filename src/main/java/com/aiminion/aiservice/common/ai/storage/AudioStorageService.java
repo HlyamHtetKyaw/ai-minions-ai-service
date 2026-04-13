@@ -12,7 +12,10 @@ import java.time.Instant;
 @Service
 public class AudioStorageService {
 
-    @Value("${audio.storage.path:/tmp/aiminion/audio}")
+//    @Value("${audio.storage.path:/tmp/aiminion/audio}")
+//    private String storagePath;
+
+    @Value("${audio.storage.path:C:/aiminion/audio}")
     private String storagePath;
 
     @Value("${audio.storage.base-url:http://localhost:8080/audio}")
@@ -31,7 +34,9 @@ public class AudioStorageService {
             Files.write(filePath, audioBytes);
 
             String url = baseUrl + "/" + filename;
-            log.info("[AudioStorageService] Saved audio: {}", url);
+
+            log.info("[AudioStorageService] Saved audio at: {}", filePath);
+            log.info("[AudioStorageService] Public URL: {}", url);
             return url;
 
         } catch (IOException ex) {

@@ -9,6 +9,7 @@ import com.aiminion.aiservice.common.ai.request.AiRequest;
 import com.aiminion.aiservice.common.ai.response.AiGenerateResponse;
 import com.aiminion.aiservice.common.ai.response.AiResponse;
 import com.aiminion.aiservice.common.ai.storage.AudioStorageService;
+import com.aiminion.aiservice.common.enums.AiProvider;
 import com.aiminion.aiservice.common.enums.FeatureType;
 import com.aiminion.aiservice.feature.BaseAiServiceGenerator;
 import com.aiminion.aiservice.feature.request.VoiceOverRequest;
@@ -81,7 +82,7 @@ public class VoiceOverAiService implements BaseAiServiceGenerator<VoiceOverReque
         // ── Step 1: Let LLM clean/enhance the script ─────────────────────────
         // aiModel here is the TTS voice (alloy, nova, etc.)
         // We use a separate text-model just for script refinement
-        String refinedScript = refineScript(req.text(), source, target, style, textLength);
+        String refinedScript = refineScript(req.text(), source, target, style, textLength , req.provider());
 
         // ── Step 2: Send refined script to TTS ───────────────────────────────
         double speed = resolveSpeed(textLength);
@@ -105,12 +106,12 @@ public class VoiceOverAiService implements BaseAiServiceGenerator<VoiceOverReque
      * For very short inputs like "နေကောင်းလား" this may return the text as-is.
      */
     private String refineScript(String text, String source, String target,
-                                String style, String textLength) {
+                                String style, String textLength, AiProvider provider) {
         AiRequest refineRequest = AiRequest.builder()
                 .systemPrompt(promptBuilderImpl.buildVoiceOverPrompt(
                         source, target, style, DEFAULT_AI_MODEL, textLength))
                 .userMessage(text)
-                .provider(null) // use default provider
+                .provider(provider) // use default provider
                 .build();
 
         AiResponse refined = aiContentTextGenerator.generate(refineRequest);

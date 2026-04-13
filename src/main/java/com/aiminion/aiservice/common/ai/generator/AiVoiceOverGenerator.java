@@ -14,13 +14,22 @@ public class AiVoiceOverGenerator {
 
     private final RestTemplate restTemplate;
 
-    @Value("${gemini.api-key}")
+//    @Value("${gemini.api-key}")
+//    private String apiKey;
+//
+//    @Value("${google.tts-api-url:https://texttospeech.googleapis.com/v1/text:synthesize}")
+//    private String ttsApiUrl;
+//
+//    @Value("${gemini.tts-model:gemini-1.5-flash}")
+//    private String ttsModel;
+
+    @Value("${openai.api-key}")
     private String apiKey;
 
-    @Value("${google.tts-api-url:https://texttospeech.googleapis.com/v1/text:synthesize}")
+    @Value("${openai.tts-api-url:https://api.openai.com/v1/audio/speech}")
     private String ttsApiUrl;
 
-    @Value("${gemini.tts-model:gemini-1.5-flash}")
+    @Value("${openai.tts-model:gpt-4o-mini-tts}")
     private String ttsModel;
 
     public AiVoiceOverGenerator(RestTemplate restTemplate) {
@@ -43,7 +52,7 @@ public class AiVoiceOverGenerator {
                 "model",           ttsModel,
                 "input",           text,
                 "voice",           voice,
-                "response_format", "mp3",
+                "format", "mp3",
                 "speed",           speed
         );
 
