@@ -21,7 +21,6 @@ public class GeminiTtsClient implements TtsClient {
     @Value("${gemini.api-key}")
     private String apiKey;
 
-    // Gemini native TTS model — uses YOUR existing Gemini key ✅
     @Value("${gemini.tts-model:gemini-2.5-flash-preview-tts}")
     private String ttsModel;
 
