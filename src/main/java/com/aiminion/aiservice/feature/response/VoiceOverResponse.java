@@ -6,6 +6,7 @@ import lombok.Builder;
 @Builder
 public record VoiceOverResponse(
         String audioUrl,
+        byte[] audioByte,
         String sourceLanguage,
         String targetLanguage,
         String style,
