@@ -2,6 +2,7 @@ package com.aiminion.aiservice.common.ai.client;
 
 import java.util.List;
 
+import org.springframework.ai.chat.metadata.Usage;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
@@ -29,7 +30,7 @@ public class GoogleGeminiTranscriptionClient {
 	private final ChatModel chatModel;
 	private final GoogleAiProperties googleAiProperties;
 
-	public String transcribe(byte[] audioBytes, String mimeType) {
+	public TranscriptionResult transcribe(byte[] audioBytes, String mimeType) {
 		if (audioBytes == null || audioBytes.length == 0) {
 			throw new IllegalArgumentException("audio bytes must not be empty");
 		}
@@ -94,6 +95,26 @@ public class GoogleGeminiTranscriptionClient {
 					lastException);
 		}
 		String rawOutput = response.getResult().getOutput().getText();
-		return VoiceDictationStyleTranscribePrompts.extractContent(rawOutput);
+		String text = VoiceDictationStyleTranscribePrompts.extractContent(rawOutput);
+
+		Integer promptTokens = null;
+		Integer completionTokens = null;
+		try {
+			Usage usage = response.getMetadata() != null ? response.getMetadata().getUsage() : null;
+			if (usage != null) {
+				promptTokens = usage.getPromptTokens();
+				completionTokens = usage.getCompletionTokens();
+			}
+		} catch (Exception ignored) {
+			// Usage can be absent depending on provider/model/runtime; transcription should still succeed.
+		}
+
+		return new TranscriptionResult(text, promptTokens, completionTokens);
 	}
+
+	public record TranscriptionResult(
+			String text,
+			Integer promptTokens,
+			Integer completionTokens
+	) {}
 }

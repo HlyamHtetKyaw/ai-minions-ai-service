@@ -62,9 +62,15 @@ public class AudioTranscribeFeatureHandler implements AiFeatureHandler {
 	}
 
 	private AiGenerateResponse buildResponse(ObjectMapper objectMapper, byte[] audio, String mimeType) {
-		String text = googleGeminiTranscriptionClient.transcribe(audio, mimeType);
+		var tr = googleGeminiTranscriptionClient.transcribe(audio, mimeType);
 		ObjectNode result = objectMapper.createObjectNode();
-		result.put("text", text);
+		result.put("text", tr.text());
+		if (tr.promptTokens() != null) {
+			result.put("tokenIn", tr.promptTokens());
+		}
+		if (tr.completionTokens() != null) {
+			result.put("tokenOut", tr.completionTokens());
+		}
 		return AiGenerateResponse.builder()
 				.featureType(FeatureType.TRANSCRIBE)
 				.usedProvider(AiProvider.GEMINI)
