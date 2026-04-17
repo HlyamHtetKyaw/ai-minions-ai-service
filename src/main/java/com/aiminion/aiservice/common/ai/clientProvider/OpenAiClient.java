@@ -53,9 +53,23 @@ public class OpenAiClient implements AiClient {
             ResponseEntity<Map> response = restTemplate.postForEntity(
                     apiUrl, new HttpEntity<>(body, headers), Map.class
             );
+            Integer tokenIn = null;
+            Integer tokenOut = null;
+            try {
+                Map<?, ?> usage = (Map<?, ?>) response.getBody().get("usage");
+                if (usage != null) {
+                    Object pt = usage.get("prompt_tokens");
+                    Object ct = usage.get("completion_tokens");
+                    if (pt instanceof Number n) tokenIn = n.intValue();
+                    if (ct instanceof Number n) tokenOut = n.intValue();
+                }
+            } catch (Exception ignored) {
+            }
             return AiResponse.builder()
                     .content(extractContent(response.getBody()))
                     .usedProvider(AiProvider.OPENAI)
+                    .tokenIn(tokenIn)
+                    .tokenOut(tokenOut)
                     .build();
         } catch (Exception ex) {
             log.error("[OpenAI] Call failed: {}", ex.getMessage(), ex);

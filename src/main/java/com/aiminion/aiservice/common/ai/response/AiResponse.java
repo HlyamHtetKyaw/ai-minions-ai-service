@@ -6,5 +6,7 @@ import lombok.Builder;
 @Builder
 public record AiResponse(
         String content,
-        AiProvider usedProvider
+        AiProvider usedProvider,
+        Integer tokenIn,
+        Integer tokenOut
 ) {}
