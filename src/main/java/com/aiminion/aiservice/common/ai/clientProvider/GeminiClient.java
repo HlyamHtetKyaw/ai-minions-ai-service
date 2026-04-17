@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
+import org.springframework.ai.chat.metadata.Usage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
@@ -91,9 +92,24 @@ public class GeminiClient implements AiClient {
         }
 
         String text = response.getResult().getOutput().getText();
+
+        Integer tokenIn = null;
+        Integer tokenOut = null;
+        try {
+            Usage usage = response.getMetadata() != null ? response.getMetadata().getUsage() : null;
+            if (usage != null) {
+                tokenIn = usage.getPromptTokens();
+                tokenOut = usage.getCompletionTokens();
+            }
+        } catch (Exception ignored) {
+            // Usage may be absent; content still returned.
+        }
+
         return AiResponse.builder()
                 .content(text != null ? text.trim() : "")
                 .usedProvider(AiProvider.GEMINI)
+                .tokenIn(tokenIn)
+                .tokenOut(tokenOut)
                 .build();
     }
 

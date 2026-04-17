@@ -9,5 +9,7 @@ public record TranslateResponse(
         String translatedFrom,
         String translatedTo,
         String style,
-        AiProvider usedProvider
+        AiProvider usedProvider,
+        Integer tokenIn,
+        Integer tokenOut
 ) {}

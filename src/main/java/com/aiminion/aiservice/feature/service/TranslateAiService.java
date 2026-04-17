@@ -84,6 +84,8 @@ public class TranslateAiService implements BaseAiServiceGenerator<TranslateReque
                 .translatedTo(target)
                 .style(style)
                 .usedProvider(aiResponse.usedProvider())
+                .tokenIn(aiResponse.tokenIn())
+                .tokenOut(aiResponse.tokenOut())
                 .build();
     }
 
