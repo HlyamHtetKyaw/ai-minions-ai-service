@@ -88,6 +88,7 @@ public class VoiceOverAiService implements BaseAiServiceGenerator<VoiceOverReque
 
         return VoiceOverResponse.builder()
                 .audioUrl(audioUrl)
+                .audioByte(audioBytes)
                 .sourceLanguage(source)
                 .targetLanguage(target)
                 .style(style)
