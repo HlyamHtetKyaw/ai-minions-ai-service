@@ -7,9 +7,12 @@ import lombok.Builder;
 public record VoiceOverResponse(
         String audioUrl,
         byte[] audioByte,
+        String audioBase64,
         String sourceLanguage,
         String targetLanguage,
         String style,
         String rawOutput,
-        AiProvider usedProvider
+        AiProvider usedProvider,
+        Integer tokenIn,
+        Integer tokenOut
 ) {}

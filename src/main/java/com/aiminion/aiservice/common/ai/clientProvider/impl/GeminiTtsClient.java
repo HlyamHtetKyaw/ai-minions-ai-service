@@ -2,6 +2,7 @@ package com.aiminion.aiservice.common.ai.clientProvider.impl;
 
 import com.aiminion.aiservice.common.ai.clientProvider.TtsClient;
 import com.aiminion.aiservice.common.enums.AiProvider;
+import com.aiminion.aiservice.feature.response.VoiceOverResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
@@ -47,11 +48,11 @@ public class GeminiTtsClient implements TtsClient {
     }
 
     /**
-     * @param voice  Gemini prebuilt voice: Aoede | Charon | Fenrir | Kore | Puck | Zephyr …
-     * @param speed  reserved for future use (Gemini TTS doesn't expose speed yet)
+     * @param voice Gemini prebuilt voice: Aoede | Charon | Fenrir | Kore | Puck | Zephyr …
+     * @param speed reserved for future use (Gemini TTS doesn't expose speed yet)
      */
     @Override
-    public byte[] synthesize(String text, String voice, double speed) {
+    public VoiceOverResponse synthesize(String text, String voice, double speed) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
@@ -87,13 +88,25 @@ public class GeminiTtsClient implements TtsClient {
             log.info("[GeminiTtsClient] TTS success, voice={} model={} mimeType={} bytes={} header={}",
                     voice, ttsModel, inlineAudio.mimeType(), bytes.length, headerPreview(bytes));
 
+            byte[] finalAudio;
+
             if (isPcmAudio(inlineAudio.mimeType())) {
-                byte[] wav = pcm16leToWav(bytes, pcmSampleRateHz, 1);
-                log.info("[GeminiTtsClient] Wrapped PCM into WAV: sampleRateHz={} channels=1 wavBytes={} wavHeader={}",
-                        pcmSampleRateHz, wav.length, headerPreview(wav));
-                return wav;
+                finalAudio = pcm16leToWav(bytes, pcmSampleRateHz, 1);
+            } else {
+                finalAudio = bytes;
             }
-            return bytes;
+
+            // token estimation
+            int tokenIn = estimateTokens(text);
+            int tokenOut = 0;
+
+            return VoiceOverResponse.builder()
+                    .audioByte(finalAudio)
+                    .audioBase64(Base64.getEncoder().encodeToString(finalAudio))
+                    .usedProvider(AiProvider.GEMINI)
+                    .tokenIn(tokenIn)
+                    .tokenOut(tokenOut)
+                    .build();
 
         } catch (Exception ex) {
             log.error("[GeminiTtsClient] TTS call failed: {}", ex.getMessage(), ex);
@@ -174,5 +187,10 @@ public class GeminiTtsClient implements TtsClient {
         System.arraycopy(header.array(), 0, wav, 0, 44);
         System.arraycopy(pcm, 0, wav, 44, pcm.length);
         return wav;
+    }
+
+    private int estimateTokens(String text) {
+        if (text == null || text.isEmpty()) return 0;
+        return (int) Math.ceil(text.length() / 3.5);
     }
 }

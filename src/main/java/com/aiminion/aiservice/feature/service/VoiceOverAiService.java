@@ -8,9 +8,13 @@ import com.aiminion.aiservice.common.ai.request.AiGenerateRequest;
 import com.aiminion.aiservice.common.ai.request.AiRequest;
 import com.aiminion.aiservice.common.ai.response.AiGenerateResponse;
 import com.aiminion.aiservice.common.ai.response.AiResponse;
+import com.aiminion.aiservice.common.ai.router.CloudStorageRouter;
 import com.aiminion.aiservice.common.ai.storage.AudioStorageService;
+import com.aiminion.aiservice.common.ai.storage.StoredMedia;
 import com.aiminion.aiservice.common.enums.AiProvider;
 import com.aiminion.aiservice.common.enums.FeatureType;
+import com.aiminion.aiservice.common.enums.MediaCategory;
+import com.aiminion.aiservice.common.util.MediaFileNameGenerator;
 import com.aiminion.aiservice.feature.BaseAiServiceGenerator;
 import com.aiminion.aiservice.feature.request.VoiceOverRequest;
 import com.aiminion.aiservice.feature.response.VoiceOverResponse;
@@ -18,6 +22,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+
+import java.util.Base64;
 
 @Slf4j
 @Service
@@ -28,6 +34,8 @@ public class VoiceOverAiService implements BaseAiServiceGenerator<VoiceOverReque
     private final AiVoiceOverGenerator aiVoiceOverGenerator;
     private final AiContentTextGenerator aiContentTextGenerator;
     private final AudioStorageService audioStorageService;
+    private final MediaFileNameGenerator mediaFileNameGenerator;
+    private final CloudStorageRouter cloudStorageRouter;
 
     private static final String DEFAULT_SOURCE = "English";
     private static final String DEFAULT_TARGET = "Myanmar";
@@ -59,7 +67,7 @@ public class VoiceOverAiService implements BaseAiServiceGenerator<VoiceOverReque
                     .build();
         }
 
-        VoiceOverResponse result = generate(req);
+        VoiceOverResponse result = generate(req); // We are also saving in Cloud in generate too in here.
 
         return AiGenerateResponse.builder()
                 .featureType(FeatureType.VOICEOVER)
@@ -82,18 +90,27 @@ public class VoiceOverAiService implements BaseAiServiceGenerator<VoiceOverReque
         double speed = resolveSpeed(textLength);
 
         // provider=null → falls back to ai.tts-default-provider in AiVoiceOverGenerator
-        byte[] audioBytes = aiVoiceOverGenerator.generateAudio(req.provider(), req.text(), aiModel, speed);
+        VoiceOverResponse response = aiVoiceOverGenerator.generateAudio(req.provider(), req.text(), aiModel, speed);
 
-        String audioUrl = audioStorageService.save(audioBytes);
+        String fileName = mediaFileNameGenerator.generate(
+                req.username(), req.userId(), "AiVoiceOver", "mp3"
+        );
+
+        StoredMedia stored = cloudStorageRouter.store(response.audioByte(), MediaCategory.AUDIO, fileName);
+
+        log.info("[VoiceOver] Audio stored → url={} key={}", stored.storageUrl(), stored.key());
 
         return VoiceOverResponse.builder()
-                .audioUrl(audioUrl)
-                .audioByte(audioBytes)
+                .audioUrl(stored.storageUrl())
+                .audioByte(response.audioByte())
+                .audioBase64(response.audioBase64())
                 .sourceLanguage(source)
                 .targetLanguage(target)
                 .style(style)
                 .rawOutput(req.text())
                 .usedProvider(req.provider() != null ? req.provider() : AiProvider.GEMINI)
+                .tokenIn(response.tokenIn())
+                .tokenOut(response.tokenOut())
                 .build();
     }
 
