@@ -18,5 +18,9 @@ public record VoiceOverRequest(
 
         String textLength,
 
+        String username,
+
+        String userId,
+
         AiProvider provider
 ) {}

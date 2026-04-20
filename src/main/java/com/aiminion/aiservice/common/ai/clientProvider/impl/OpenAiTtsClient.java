@@ -1,12 +1,14 @@
 package com.aiminion.aiservice.common.ai.clientProvider.impl;
 import com.aiminion.aiservice.common.ai.clientProvider.TtsClient;
 import com.aiminion.aiservice.common.enums.AiProvider;
+import com.aiminion.aiservice.feature.response.VoiceOverResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.Base64;
 import java.util.Map;
 
 @Slf4j
@@ -34,7 +36,7 @@ public class OpenAiTtsClient implements TtsClient {
     }
 
     @Override
-    public byte[] synthesize(String text, String voice, double speed) {
+    public VoiceOverResponse synthesize(String text, String voice, double speed) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(apiKey);
@@ -58,11 +60,27 @@ public class OpenAiTtsClient implements TtsClient {
             log.info("[OpenAiTtsClient] TTS success, bytes={}",
                     response.getBody() != null ? response.getBody().length : 0);
 
-            return response.getBody();
+            byte[] audioBytes = response.getBody();
+
+            int tokenIn = estimateTokens(text);
+            int tokenOut = 0;
+
+            return VoiceOverResponse.builder()
+                    .audioByte(audioBytes)
+                    .audioBase64(Base64.getEncoder().encodeToString(audioBytes))
+                    .usedProvider(AiProvider.OPENAI)
+                    .tokenIn(tokenIn)
+                    .tokenOut(tokenOut)
+                    .build();
 
         } catch (Exception ex) {
             log.error("[OpenAiTtsClient] TTS call failed: {}", ex.getMessage(), ex);
             throw new RuntimeException("OpenAI voice generation unavailable. Please try again later.");
         }
+    }
+
+    private int estimateTokens(String text) {
+        if (text == null || text.isEmpty()) return 0;
+        return (int) Math.ceil(text.length() / 4.0);
     }
 }

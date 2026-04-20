@@ -2,6 +2,7 @@ package com.aiminion.aiservice.common.ai.generator;
 
 import com.aiminion.aiservice.common.ai.clientProvider.TtsClient;
 import com.aiminion.aiservice.common.enums.AiProvider;
+import com.aiminion.aiservice.feature.response.VoiceOverResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -26,7 +27,7 @@ public class AiVoiceOverGenerator {
         log.info("[AiVoiceOverGenerator] Registered TTS providers: {}", this.clients.keySet());
     }
 
-    public byte[] generateAudio(AiProvider provider, String text, String voice, double speed) {
+    public VoiceOverResponse generateAudio(AiProvider provider, String text, String voice, double speed) {
         AiProvider resolved = provider != null ? provider : defaultProvider;
 
         TtsClient client = clients.get(resolved);
