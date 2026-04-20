@@ -26,6 +26,9 @@ public class ProcessingStorageClient {
 	@Value("${processing.storage.image-path:/api/v1/internal/storage/images}")
 	private String processingImagePath;
 
+	@Value("${processing.storage.audio-path:/api/v1/internal/storage/audio}")
+	private String processingAudioPath;
+
 	public StoredImage storeImage(byte[] imageBytes, String keyHint) {
 		String url = processingBaseUrl.trim() + processingImagePath.trim();
 		HttpHeaders headers = new HttpHeaders();
@@ -50,7 +53,38 @@ public class ProcessingStorageClient {
 		return new StoredImage(s, resolvedKey);
 	}
 
+	public StoredAudio storeAudio(byte[] audioBytes, String keyHint, String contentType) {
+		String url = processingBaseUrl.trim() + processingAudioPath.trim();
+		HttpHeaders headers = new HttpHeaders();
+		headers.setContentType(MediaType.APPLICATION_JSON);
+		Map<String, Object> body = Map.of(
+				"audioBytes", audioBytes,
+				"keyHint", keyHint == null ? "" : keyHint,
+				"contentType", contentType == null ? "audio/mpeg" : contentType);
+		ResponseEntity<?> response = restTemplate.postForEntity(
+				url,
+				new HttpEntity<>(body, headers),
+				Map.class);
+		if (!(response.getBody() instanceof Map<?, ?> payload)) {
+			throw new RuntimeException("Processing service returned empty audio storage payload");
+		}
+		Object storageUrl = payload.get("storageUrl");
+		Object key = payload.get("key");
+		if (!(storageUrl instanceof String s) || s.isBlank()) {
+			throw new RuntimeException("Processing service audio storageUrl is missing");
+		}
+		String resolvedKey = key instanceof String k ? k : "";
+		log.info("[ProcessingStorageClient] Stored audio url={} key={}", s, resolvedKey);
+		return new StoredAudio(s, resolvedKey);
+	}
+
 	public record StoredImage(
+			String storageUrl,
+			String key
+	) {
+	}
+
+	public record StoredAudio(
 			String storageUrl,
 			String key
 	) {

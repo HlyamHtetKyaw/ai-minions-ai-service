@@ -3,16 +3,23 @@ package com.aiminion.aiservice.common.ai.clientProvider.impl;
 import com.aiminion.aiservice.common.ai.clientProvider.TtsClient;
 import com.aiminion.aiservice.common.enums.AiProvider;
 import com.aiminion.aiservice.feature.response.VoiceOverResponse;
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.StreamReadConstraints;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
@@ -38,6 +45,23 @@ public class GeminiTtsClient implements TtsClient {
     private static final String GEMINI_TTS_URL =
             "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s";
 
+    private static final Set<String> SUPPORTED_GEMINI_VOICES = Set.of(
+            "achernar", "achird", "algenib", "algieba", "alnilam", "aoede", "autonoe", "callirrhoe",
+            "charon", "despina", "enceladus", "erinome", "fenrir", "gacrux", "iapetus", "kore",
+            "laomedeia", "leda", "orus", "puck", "pulcherrima", "rasalgethi", "sadachbia",
+            "sadaltager", "schedar", "sulafat", "umbriel", "vindemiatrix", "zephyr", "zubenelgenubi"
+    );
+
+    private static final Map<String, String> VOICE_ALIASES = buildVoiceAliases();
+    private static final int MAX_TTS_JSON_STRING_LENGTH = 50_000_000;
+    private static final ObjectMapper LARGE_JSON_MAPPER = new ObjectMapper(
+            JsonFactory.builder()
+                    .streamReadConstraints(
+                            StreamReadConstraints.builder()
+                                    .maxStringLength(MAX_TTS_JSON_STRING_LENGTH)
+                                    .build())
+                    .build());
+
     public GeminiTtsClient(RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
     }
@@ -53,6 +77,8 @@ public class GeminiTtsClient implements TtsClient {
      */
     @Override
     public VoiceOverResponse synthesize(String text, String voice, double speed) {
+        String resolvedVoice = resolveVoiceName(voice);
+
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
@@ -65,7 +91,7 @@ public class GeminiTtsClient implements TtsClient {
                         "speechConfig", Map.of(
                                 "voiceConfig", Map.of(
                                         "prebuiltVoiceConfig", Map.of(
-                                                "voiceName", voice
+                                                "voiceName", resolvedVoice
                                         )
                                 )
                         )
@@ -75,18 +101,18 @@ public class GeminiTtsClient implements TtsClient {
         String url = String.format(GEMINI_TTS_URL, ttsModel, apiKey);
 
         try {
-            ResponseEntity<Map> response = restTemplate.exchange(
+            ResponseEntity<String> response = restTemplate.exchange(
                     url,
                     HttpMethod.POST,
                     new HttpEntity<>(body, headers),
-                    Map.class
+                    String.class
             );
 
             InlineAudio inlineAudio = extractInlineAudio(response.getBody());
             byte[] bytes = Base64.getDecoder().decode(inlineAudio.base64Data());
 
-            log.info("[GeminiTtsClient] TTS success, voice={} model={} mimeType={} bytes={} header={}",
-                    voice, ttsModel, inlineAudio.mimeType(), bytes.length, headerPreview(bytes));
+            log.info("[GeminiTtsClient] TTS success, requestedVoice={} resolvedVoice={} model={} mimeType={} bytes={} header={}",
+                    voice, resolvedVoice, ttsModel, inlineAudio.mimeType(), bytes.length, headerPreview(bytes));
 
             byte[] finalAudio;
 
@@ -108,6 +134,10 @@ public class GeminiTtsClient implements TtsClient {
                     .tokenOut(tokenOut)
                     .build();
 
+        } catch (HttpStatusCodeException ex) {
+            String responseBody = ex.getResponseBodyAsString();
+            log.error("[GeminiTtsClient] TTS call failed: status={} body={}", ex.getStatusCode(), responseBody, ex);
+            throw new RuntimeException("Gemini TTS request failed: " + summarizeRemoteError(responseBody));
         } catch (Exception ex) {
             log.error("[GeminiTtsClient] TTS call failed: {}", ex.getMessage(), ex);
             throw new RuntimeException("Gemini voice generation unavailable. Please try again later.");
@@ -118,18 +148,28 @@ public class GeminiTtsClient implements TtsClient {
      * Response path:
      * candidates[0] → content → parts[0] → inlineData → data (base64 audio)
      */
-    @SuppressWarnings("unchecked")
-    private InlineAudio extractInlineAudio(Map<?, ?> body) {
+    private InlineAudio extractInlineAudio(String rawBody) {
         try {
-            List<Map<?, ?>> candidates = (List<Map<?, ?>>) body.get("candidates");
-            Map<?, ?> content         = (Map<?, ?>) candidates.get(0).get("content");
-            List<Map<?, ?>> parts     = (List<Map<?, ?>>) content.get("parts");
-            Map<?, ?> inlineData      = (Map<?, ?>) parts.get(0).get("inlineData");
-            String data = (String) inlineData.get("data");
-            String mimeType = inlineData.get("mimeType") != null ? String.valueOf(inlineData.get("mimeType")) : null;
+            if (rawBody == null || rawBody.isBlank()) {
+                throw new RuntimeException("Empty Gemini TTS response.");
+            }
+            JsonNode root = LARGE_JSON_MAPPER.readTree(rawBody);
+            JsonNode inlineData = root.path("candidates")
+                    .path(0)
+                    .path("content")
+                    .path("parts")
+                    .path(0)
+                    .path("inlineData");
+            String data = inlineData.path("data").asText(null);
+            String mimeType = inlineData.path("mimeType").isMissingNode()
+                    ? null
+                    : inlineData.path("mimeType").asText(null);
+            if (data == null || data.isBlank()) {
+                throw new RuntimeException("Gemini TTS response missing inline audio data.");
+            }
             return new InlineAudio(data, mimeType);
         } catch (Exception ex) {
-            log.error("[GeminiTtsClient] Failed to parse audio response: {}", body);
+            log.error("[GeminiTtsClient] Failed to parse audio response: {}", summarizeRemoteError(rawBody));
             throw new RuntimeException("Unexpected response format from Gemini TTS.");
         }
     }
@@ -192,5 +232,40 @@ public class GeminiTtsClient implements TtsClient {
     private int estimateTokens(String text) {
         if (text == null || text.isEmpty()) return 0;
         return (int) Math.ceil(text.length() / 3.5);
+    }
+
+    private static Map<String, String> buildVoiceAliases() {
+        Map<String, String> aliases = new HashMap<>();
+        aliases.put("woman", "kore");
+        aliases.put("female", "kore");
+        aliases.put("girl", "aoede");
+        aliases.put("man", "charon");
+        aliases.put("male", "charon");
+        aliases.put("boy", "fenrir");
+        return aliases;
+    }
+
+    private String resolveVoiceName(String requestedVoice) {
+        String fallback = "kore";
+        if (requestedVoice == null || requestedVoice.isBlank()) {
+            return fallback;
+        }
+        String normalized = requestedVoice.trim().toLowerCase();
+        String fromAlias = VOICE_ALIASES.getOrDefault(normalized, normalized);
+        if (SUPPORTED_GEMINI_VOICES.contains(fromAlias)) {
+            return fromAlias;
+        }
+        return fallback;
+    }
+
+    private String summarizeRemoteError(String responseBody) {
+        if (responseBody == null || responseBody.isBlank()) {
+            return "invalid request";
+        }
+        String singleLine = responseBody.replace('\n', ' ').replace('\r', ' ').trim();
+        if (singleLine.length() > 220) {
+            return singleLine.substring(0, 220) + "...";
+        }
+        return singleLine;
     }
 }

@@ -1,21 +1,14 @@
 package com.aiminion.aiservice.feature.service;
 
-import com.aiminion.aiservice.common.ai.generator.AiContentTextGenerator;
 import com.aiminion.aiservice.common.ai.generator.AiVoiceOverGenerator;
 import com.aiminion.aiservice.common.ai.handler.AiFeatureHandler;
-import com.aiminion.aiservice.common.ai.prompt.impl.PromptBuilderImpl;
 import com.aiminion.aiservice.common.ai.request.AiGenerateRequest;
-import com.aiminion.aiservice.common.ai.request.AiRequest;
 import com.aiminion.aiservice.common.ai.response.AiGenerateResponse;
-import com.aiminion.aiservice.common.ai.response.AiResponse;
-import com.aiminion.aiservice.common.ai.router.CloudStorageRouter;
-import com.aiminion.aiservice.common.ai.storage.AudioStorageService;
-import com.aiminion.aiservice.common.ai.storage.StoredMedia;
 import com.aiminion.aiservice.common.enums.AiProvider;
 import com.aiminion.aiservice.common.enums.FeatureType;
-import com.aiminion.aiservice.common.enums.MediaCategory;
 import com.aiminion.aiservice.common.util.MediaFileNameGenerator;
 import com.aiminion.aiservice.feature.BaseAiServiceGenerator;
+import com.aiminion.aiservice.feature.integration.ProcessingStorageClient;
 import com.aiminion.aiservice.feature.request.VoiceOverRequest;
 import com.aiminion.aiservice.feature.response.VoiceOverResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -23,28 +16,20 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.util.Base64;
-
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class VoiceOverAiService implements BaseAiServiceGenerator<VoiceOverRequest, VoiceOverResponse>, AiFeatureHandler {
 
-    private final PromptBuilderImpl promptBuilderImpl;
     private final AiVoiceOverGenerator aiVoiceOverGenerator;
-    private final AiContentTextGenerator aiContentTextGenerator;
-    private final AudioStorageService audioStorageService;
     private final MediaFileNameGenerator mediaFileNameGenerator;
-    private final CloudStorageRouter cloudStorageRouter;
+    private final ProcessingStorageClient processingStorageClient;
 
     private static final String DEFAULT_SOURCE = "English";
     private static final String DEFAULT_TARGET = "Myanmar";
     private static final String DEFAULT_STYLE  = "Formal";
     private static final String DEFAULT_AI_MODEL = "Alex";
     private static final String DEFAULT_TEXT_LENGTH = "Short";
-
-    private static final String TAG_TITLE  = "[TITLE]:";
-    private static final String TAG_SCRIPT = "[SCRIPT]:";
 
     @Override
     public FeatureType getFeatureType() {
@@ -67,7 +52,7 @@ public class VoiceOverAiService implements BaseAiServiceGenerator<VoiceOverReque
                     .build();
         }
 
-        VoiceOverResponse result = generate(req); // We are also saving in Cloud in generate too in here.
+        VoiceOverResponse result = generate(req);
 
         return AiGenerateResponse.builder()
                 .featureType(FeatureType.VOICEOVER)
@@ -96,7 +81,11 @@ public class VoiceOverAiService implements BaseAiServiceGenerator<VoiceOverReque
                 req.username(), req.userId(), "AiVoiceOver", "mp3"
         );
 
-        StoredMedia stored = cloudStorageRouter.store(response.audioByte(), MediaCategory.AUDIO, fileName);
+        ProcessingStorageClient.StoredAudio stored = processingStorageClient.storeAudio(
+                response.audioByte(),
+                "voice-over/" + fileName,
+                "audio/mpeg"
+        );
 
         log.info("[VoiceOver] Audio stored → url={} key={}", stored.storageUrl(), stored.key());
 
@@ -115,26 +104,6 @@ public class VoiceOverAiService implements BaseAiServiceGenerator<VoiceOverReque
     }
 
     /**
-     * Uses the chat LLM to clean up and naturalise the script before TTS.
-     * For very short inputs like "နေကောင်းလား" this may return the text as-is.
-     */
-    private String refineScript(String text, String source, String target,
-                                String style, String textLength, AiProvider provider) {
-        AiRequest refineRequest = AiRequest.builder()
-                .systemPrompt(promptBuilderImpl.buildVoiceOverPrompt(
-                        source, target, style, DEFAULT_AI_MODEL, textLength))
-                .userMessage(text)
-                .provider(provider)
-                .build();
-
-        AiResponse refined = aiContentTextGenerator.generate(refineRequest);
-
-        // Extract [SCRIPT]: block; fall back to raw text if parsing fails
-        String script = parseTag(refined.content(), TAG_SCRIPT, null);
-        return isBlank(script) ? text : script;
-    }
-
-    /**
      * Slows down LONG scripts slightly for natural pacing.
      */
     private double resolveSpeed(String textLength) {
@@ -143,26 +112,6 @@ public class VoiceOverAiService implements BaseAiServiceGenerator<VoiceOverReque
             case "MEDIUM" -> 0.95;
             default       -> 1.0;   // SHORT
         };
-    }
-
-    // ── helpers ──────────────────────────────────────────────────────────────
-    private String resolve(String value, String fallback) {
-        return (value == null || value.isBlank()) ? fallback : value.trim();
-    }
-
-    /**
-     * Extracts the content between {@code startTag} and {@code endTag} (or end-of-string).
-     * E.g. parseTag(raw, "[TITLE]:", "[SCRIPT]:") → "Myanmar Night Market"
-     */
-    private String parseTag(String raw, String startTag, String endTag) {
-        int start = raw.indexOf(startTag);
-        if (start == -1) return "";
-        start += startTag.length();
-
-        int end = (endTag != null) ? raw.indexOf(endTag, start) : raw.length();
-        if (end == -1) end = raw.length();
-
-        return raw.substring(start, end).strip();
     }
 
     private boolean isBlank(String s) { return s == null || s.isBlank(); }
