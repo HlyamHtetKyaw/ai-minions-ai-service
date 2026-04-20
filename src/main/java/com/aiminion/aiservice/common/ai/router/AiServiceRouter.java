@@ -30,7 +30,7 @@ public class AiServiceRouter {
     public void init() {
         handlerMap = handlers.stream()
                 .collect(Collectors.toMap(AiFeatureHandler::getFeatureType, Function.identity()));
-        log.info("AiServiceRouter registered features: {}", handlerMap.keySet());
+        log.info("AiServiceRouter registered capability handlers: {}", handlerMap.keySet());
     }
 
     public AiGenerateResponse route(AiGenerateRequest request) {
