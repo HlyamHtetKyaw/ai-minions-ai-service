@@ -3,6 +3,7 @@ package com.aiminion.aiservice.common.enums;
 public enum FeatureType {
 	TRANSLATE,
 	TRANSCRIBE,
+	SUBTITLES,
 	SUMMARIZE,
 	GENERATE_CONTENT_TEXT,
 	GENERATE_CONTENT_IMAGE,
