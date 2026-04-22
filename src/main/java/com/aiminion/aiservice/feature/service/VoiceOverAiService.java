@@ -91,6 +91,7 @@ public class VoiceOverAiService implements BaseAiServiceGenerator<VoiceOverReque
 
         return VoiceOverResponse.builder()
                 .audioUrl(stored.storageUrl())
+                .s3Key(stored.key())
                 .audioByte(response.audioByte())
                 .audioBase64(response.audioBase64())
                 .sourceLanguage(source)
