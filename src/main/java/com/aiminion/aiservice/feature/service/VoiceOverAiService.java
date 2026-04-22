@@ -81,11 +81,17 @@ public class VoiceOverAiService implements BaseAiServiceGenerator<VoiceOverReque
                 req.username(), req.userId(), "AiVoiceOver", "mp3"
         );
 
-        ProcessingStorageClient.StoredAudio stored = processingStorageClient.storeAudio(
+        ProcessingStorageClient.StoredAudio stored = processingStorageClient.storeAudioLocally(
                 response.audioByte(),
-                "voice-over/" + fileName,
+                fileName,
                 "audio/mpeg"
         );
+
+//        ProcessingStorageClient.StoredAudio stored = processingStorageClient.storeAudio(
+//                response.audioByte(),
+//                "voice-over/" + fileName,
+//                "audio/mpeg"
+//        );
 
         log.info("[VoiceOver] Audio stored → url={} key={}", stored.storageUrl(), stored.key());
 

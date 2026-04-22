@@ -8,6 +8,7 @@ import com.fasterxml.jackson.core.StreamReadConstraints;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Component;
@@ -62,7 +63,11 @@ public class GeminiTtsClient implements TtsClient {
                                     .build())
                     .build());
 
-    public GeminiTtsClient(RestTemplate restTemplate) {
+//    public GeminiTtsClient(RestTemplate restTemplate) {
+//        this.restTemplate = restTemplate;
+//    }
+
+    public GeminiTtsClient(@Qualifier("proxyRestTemplate") RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
     }
 

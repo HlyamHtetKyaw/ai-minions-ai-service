@@ -23,7 +23,7 @@ public class GcpCloudStorageClient implements CloudStorageClient {
 
     private final RestTemplate restTemplate;
 
-    @Value("${processing.storage.base-url:http://localhost:8082}")
+    @Value("${processing.storage.base-url:http://localhost:8080}")
     private String baseUrl;
 
     // Path templates per media type

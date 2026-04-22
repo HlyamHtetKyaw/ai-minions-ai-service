@@ -23,6 +23,7 @@ public class GeminiImagenImageGenerator {
 	private final RestTemplate restTemplate;
 
 	@Value("${spring.ai.google.genai.api-key:}")
+
 	private String apiKeyFromSpringAi;
 
 	@Value("${gemini.api-key:}")
