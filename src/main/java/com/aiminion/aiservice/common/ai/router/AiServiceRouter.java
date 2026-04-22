@@ -1,10 +1,10 @@
 package com.aiminion.aiservice.common.ai.router;
 
 import com.aiminion.aiservice.common.ai.handler.AiFeatureHandler;
+import com.aiminion.aiservice.common.ai.handler.InlineAudioFeatureHandler;
 import com.aiminion.aiservice.common.ai.request.AiGenerateRequest;
 import com.aiminion.aiservice.common.ai.response.AiGenerateResponse;
 import com.aiminion.aiservice.common.enums.FeatureType;
-import com.aiminion.aiservice.feature.audio.AudioTranscribeFeatureHandler;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -52,14 +52,15 @@ public class AiServiceRouter {
 			byte[] audioBytes,
 			String filename,
 			String mimeType) {
-		if (request.featureType() != FeatureType.TRANSCRIBE) {
-			throw new IllegalArgumentException("Inline audio is only supported for featureType TRANSCRIBE");
+		AiFeatureHandler handler = handlerMap.get(request.featureType());
+		if (handler == null) {
+			throw new IllegalArgumentException("Unsupported feature type: " + request.featureType());
 		}
-		AiFeatureHandler handler = handlerMap.get(FeatureType.TRANSCRIBE);
-		if (!(handler instanceof AudioTranscribeFeatureHandler audioHandler)) {
-			throw new IllegalStateException("TRANSCRIBE handler is not AudioTranscribeFeatureHandler");
+		if (!(handler instanceof InlineAudioFeatureHandler audioHandler)) {
+			throw new IllegalArgumentException("Inline audio is not supported for featureType " + request.featureType());
 		}
-		log.info("[AiServiceRouter] Inline TRANSCRIBE provider={} ({} bytes)", request.provider(), audioBytes.length);
+		log.info("[AiServiceRouter] Inline audio feature={} provider={} ({} bytes)",
+				request.featureType(), request.provider(), audioBytes.length);
 		return audioHandler.handleInlineAudio(request, audioBytes, filename, mimeType, objectMapper);
 	}
 }
