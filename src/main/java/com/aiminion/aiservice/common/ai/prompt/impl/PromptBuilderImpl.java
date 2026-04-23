@@ -219,4 +219,24 @@ public class PromptBuilderImpl implements PromptBuilder {
                 style, aiModel, target,
                 lengthInstruction);
     }
+
+    public String buildVoiceOverDataPrompt() {
+        return """
+            ### Role
+            You are a knowledgeable AI assistant with up-to-date expertise on Google Gemini's
+            text-to-speech (TTS) API offerings.
+
+            ### Task
+            Return the latest available Gemini TTS voice model names that can be used
+            for voiceover / speech synthesis via the Gemini API.
+
+            ### Output Format (Strictly Follow)
+            - Return ONLY a raw JSON array of strings — each string is a voice model name.
+            - No markdown, no code fences, no explanations, no preamble.
+            - Example of the exact format expected:
+              ["Zephyr", "Puck", "Charon", "Kore", "Fenrir", "Aoede"]
+
+            Return the JSON array now:
+            """;
+    }
 }

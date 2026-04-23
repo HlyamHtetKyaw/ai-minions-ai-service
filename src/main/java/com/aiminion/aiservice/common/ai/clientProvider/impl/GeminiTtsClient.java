@@ -63,13 +63,13 @@ public class GeminiTtsClient implements TtsClient {
                                     .build())
                     .build());
 
-//    public GeminiTtsClient(RestTemplate restTemplate) {
-//        this.restTemplate = restTemplate;
-//    }
-
-    public GeminiTtsClient(@Qualifier("proxyRestTemplate") RestTemplate restTemplate) {
+    public GeminiTtsClient(RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
     }
+
+//    public GeminiTtsClient(@Qualifier("proxyRestTemplate") RestTemplate restTemplate) {
+//        this.restTemplate = restTemplate;
+//    }
 
     @Override
     public AiProvider getProvider() {

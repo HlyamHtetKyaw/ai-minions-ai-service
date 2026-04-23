@@ -2,8 +2,11 @@ package com.aiminion.aiservice.feature.service;
 
 import com.aiminion.aiservice.common.ai.generator.AiVoiceOverGenerator;
 import com.aiminion.aiservice.common.ai.handler.AiFeatureHandler;
+import com.aiminion.aiservice.common.ai.prompt.impl.PromptBuilderImpl;
 import com.aiminion.aiservice.common.ai.request.AiGenerateRequest;
+import com.aiminion.aiservice.common.ai.request.AiRequest;
 import com.aiminion.aiservice.common.ai.response.AiGenerateResponse;
+import com.aiminion.aiservice.common.ai.response.AiResponse;
 import com.aiminion.aiservice.common.enums.AiProvider;
 import com.aiminion.aiservice.common.enums.FeatureType;
 import com.aiminion.aiservice.common.util.MediaFileNameGenerator;
@@ -16,6 +19,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -24,6 +29,7 @@ public class VoiceOverAiService implements BaseAiServiceGenerator<VoiceOverReque
     private final AiVoiceOverGenerator aiVoiceOverGenerator;
     private final MediaFileNameGenerator mediaFileNameGenerator;
     private final ProcessingStorageClient processingStorageClient;
+    private final PromptBuilderImpl promptBuilderImpl;
 
     private static final String DEFAULT_SOURCE = "English";
     private static final String DEFAULT_TARGET = "Myanmar";
@@ -52,12 +58,38 @@ public class VoiceOverAiService implements BaseAiServiceGenerator<VoiceOverReque
                     .build();
         }
 
+        boolean getStyles = request.payload().path("getStyles").asBoolean(false);
+        if (getStyles) {
+            VoiceOverResponse result = getAiVoiceOverData(req);
+
+            return AiGenerateResponse.builder()
+                    .featureType(FeatureType.VOICEOVER)
+                    .usedProvider(req.provider())
+                    .result(result)
+                    .build();
+        }
+
         VoiceOverResponse result = generate(req);
 
         return AiGenerateResponse.builder()
                 .featureType(FeatureType.VOICEOVER)
                 .usedProvider(result.usedProvider())
                 .result(result)
+                .build();
+    }
+
+    private VoiceOverResponse getAiVoiceOverData(VoiceOverRequest req) {
+
+        AiRequest aiRequest = AiRequest.builder()
+                .systemPrompt(promptBuilderImpl.buildVoiceOverDataPrompt())
+                .userMessage("List the latest available Gemini TTS voice models.")
+                .provider(req.provider())
+                .build();
+
+        List<String> aiLatestModels = aiVoiceOverGenerator.generate(aiRequest);
+
+        return VoiceOverResponse.builder()
+                .aiLatestModels(aiLatestModels)
                 .build();
     }
 
@@ -81,17 +113,18 @@ public class VoiceOverAiService implements BaseAiServiceGenerator<VoiceOverReque
                 req.username(), req.userId(), "AiVoiceOver", "mp3"
         );
 
-        ProcessingStorageClient.StoredAudio stored = processingStorageClient.storeAudioLocally(
-                response.audioByte(),
-                fileName,
-                "audio/mpeg"
-        );
-
-//        ProcessingStorageClient.StoredAudio stored = processingStorageClient.storeAudio(
+        // to Test in Local
+//        ProcessingStorageClient.StoredAudio stored = processingStorageClient.storeAudioLocally(
 //                response.audioByte(),
-//                "voice-over/" + fileName,
+//                fileName,
 //                "audio/mpeg"
 //        );
+
+        ProcessingStorageClient.StoredAudio stored = processingStorageClient.storeAudio(
+                response.audioByte(),
+                "voice-over/" + fileName,
+                "audio/mpeg"
+        );
 
         log.info("[VoiceOver] Audio stored → url={} key={}", stored.storageUrl(), stored.key());
 

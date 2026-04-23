@@ -34,8 +34,6 @@ public class ProcessingStorageClient {
 	@Value("${processing.storage.audio-path:/api/v1/internal/storage/audio}")
 	private String processingAudioPath;
 
-	@Value("${processing.storage.local-audio-path:D:/Personal/voice-over-audio}")
-	private String localAudioPath;
 
 	public StoredImage storeImage(byte[] imageBytes, String keyHint) {
 		String url = processingBaseUrl.trim() + processingImagePath.trim();
@@ -88,7 +86,9 @@ public class ProcessingStorageClient {
 
 	public StoredAudio storeAudioLocally(byte[] audioBytes, String keyHint, String contentType) {
 		try {
-			Path basePath = Paths.get(localAudioPath).toAbsolutePath().normalize();
+			Path basePath = Paths.get(getLocalAudioBasePath())
+					.toAbsolutePath()
+					.normalize();
 
 			Path dirPath = basePath.resolve("voice-over");
 
@@ -143,5 +143,9 @@ public class ProcessingStorageClient {
 			String storageUrl,
 			String key
 	) {
+	}
+
+	private String getLocalAudioBasePath() {
+		return System.getProperty("user.dir") + "/local-storage/audio";
 	}
 }
