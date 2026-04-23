@@ -8,6 +8,7 @@ import java.util.List;
 @Builder
 public record VoiceOverResponse(
         String audioUrl,
+        String s3Key,
         byte[] audioByte,
         String audioBase64,
         String sourceLanguage,

@@ -4,6 +4,7 @@ import org.springframework.stereotype.Component;
 
 import com.aiminion.aiservice.common.ai.client.GoogleGeminiTranscriptionClient;
 import com.aiminion.aiservice.common.ai.handler.AiFeatureHandler;
+import com.aiminion.aiservice.common.ai.handler.InlineAudioFeatureHandler;
 import com.aiminion.aiservice.common.ai.request.AiGenerateRequest;
 import com.aiminion.aiservice.common.ai.response.AiGenerateResponse;
 import com.aiminion.aiservice.common.enums.AiProvider;
@@ -18,7 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class AudioTranscribeFeatureHandler implements AiFeatureHandler {
+public class AudioTranscribeFeatureHandler implements AiFeatureHandler, InlineAudioFeatureHandler {
 
 	private final GoogleGeminiTranscriptionClient googleGeminiTranscriptionClient;
 
@@ -33,6 +34,7 @@ public class AudioTranscribeFeatureHandler implements AiFeatureHandler {
 				"AUDIO transcribe is only supported via multipart POST /generate with `request` (JSON) and `audio` (binary) parts.");
 	}
 
+	@Override
 	public AiGenerateResponse handleInlineAudio(
 			AiGenerateRequest request,
 			byte[] audioBytes,
