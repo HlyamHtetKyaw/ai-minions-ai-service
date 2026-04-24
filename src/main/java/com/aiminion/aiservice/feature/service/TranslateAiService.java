@@ -7,7 +7,9 @@ import com.aiminion.aiservice.common.ai.request.AiGenerateRequest;
 import com.aiminion.aiservice.common.ai.request.AiRequest;
 import com.aiminion.aiservice.common.ai.response.AiGenerateResponse;
 import com.aiminion.aiservice.common.ai.response.AiResponse;
+import com.aiminion.aiservice.common.enums.AiProvider;
 import com.aiminion.aiservice.common.enums.FeatureType;
+import com.aiminion.aiservice.common.sanitizer.service.SanitizerService;
 import com.aiminion.aiservice.common.util.AIStyles;
 import com.aiminion.aiservice.feature.BaseAiServiceGenerator;
 import com.aiminion.aiservice.feature.request.TranslateRequest;
@@ -26,6 +28,7 @@ public class TranslateAiService implements BaseAiServiceGenerator<TranslateReque
 
     private final AiContentTextGenerator aiContentTextGenerator;
     private final PromptBuilderImpl promptBuilderImpl;
+    private final SanitizerService sanitizerService;
 
     private static final String DEFAULT_SOURCE = "English";
     private static final String DEFAULT_TARGET = "Myanmar";
@@ -47,11 +50,13 @@ public class TranslateAiService implements BaseAiServiceGenerator<TranslateReque
         if (request.provider() != null) {
             translateRequest = TranslateRequest.builder()
                     .text(translateRequest.text())
-
                     .style(translateRequest.style())
                     .provider(request.provider())
                     .build();
         }
+
+        // Sanitize Method - checks for harmful content and throws if unsafe
+        sanitizerService.sanitize(translateRequest.text(), FeatureType.TRANSLATE , request.provider());
 
         boolean getStyles = request.payload().path("getStyles").asBoolean(false);
         if(getStyles){

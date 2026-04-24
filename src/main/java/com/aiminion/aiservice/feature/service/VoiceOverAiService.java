@@ -6,6 +6,7 @@ import com.aiminion.aiservice.common.ai.request.AiGenerateRequest;
 import com.aiminion.aiservice.common.ai.response.AiGenerateResponse;
 import com.aiminion.aiservice.common.enums.AiProvider;
 import com.aiminion.aiservice.common.enums.FeatureType;
+import com.aiminion.aiservice.common.sanitizer.service.SanitizerService;
 import com.aiminion.aiservice.common.util.AIStyles;
 import com.aiminion.aiservice.common.util.MediaFileNameGenerator;
 import com.aiminion.aiservice.feature.BaseAiServiceGenerator;
@@ -32,6 +33,7 @@ public class VoiceOverAiService implements BaseAiServiceGenerator<VoiceOverReque
     private final AiVoiceOverGenerator aiVoiceOverGenerator;
     private final MediaFileNameGenerator mediaFileNameGenerator;
     private final ProcessingStorageClient processingStorageClient;
+    private final SanitizerService sanitizerService;
 
     private static final String DEFAULT_SOURCE = "English";
     private static final String DEFAULT_TARGET = "Myanmar";
@@ -59,6 +61,9 @@ public class VoiceOverAiService implements BaseAiServiceGenerator<VoiceOverReque
                     .provider(request.provider())
                     .build();
         }
+
+        // Sanitizer for Voice Over
+        sanitizerService.sanitize(req.text(), FeatureType.VOICEOVER , request.provider());
 
         boolean listModels = request.payload().path("getVoiceModels").asBoolean(false)
                 || request.payload().path("getStyles").asBoolean(false);

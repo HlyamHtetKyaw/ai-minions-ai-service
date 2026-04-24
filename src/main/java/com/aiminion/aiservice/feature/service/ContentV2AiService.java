@@ -5,6 +5,7 @@ import com.aiminion.aiservice.common.ai.request.AiGenerateRequest;
 import com.aiminion.aiservice.common.ai.response.AiGenerateResponse;
 import com.aiminion.aiservice.common.enums.AiProvider;
 import com.aiminion.aiservice.common.enums.FeatureType;
+import com.aiminion.aiservice.common.sanitizer.service.SanitizerService;
 import com.aiminion.aiservice.feature.BaseAiServiceGenerator;
 import com.aiminion.aiservice.feature.request.ContentImageV2Request;
 import com.aiminion.aiservice.feature.request.ContentTextRequest;
@@ -28,6 +29,7 @@ public class ContentV2AiService
 
     private final ContentTextAiService contentTextAiService;
     private final ContentImageV2AiService contentImageV2AiService;
+    private final SanitizerService sanitizerService;
 
     @Override
     public FeatureType getFeatureType() {
@@ -37,6 +39,10 @@ public class ContentV2AiService
     @Override
     public AiGenerateResponse handle(AiGenerateRequest request, ObjectMapper objectMapper) {
         ContentV2Request req = objectMapper.convertValue(request.payload(), ContentV2Request.class);
+
+        // Sanitizer for GENERATE_CONTENT_V2
+        sanitizerService.sanitize(req.topic(), FeatureType.GENERATE_CONTENT_V2 , request.provider());
+
         ContentV2Response result = generate(req);
         return AiGenerateResponse.builder()
                 .featureType(FeatureType.GENERATE_CONTENT_V2)

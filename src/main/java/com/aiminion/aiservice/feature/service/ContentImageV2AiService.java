@@ -9,6 +9,7 @@ import com.aiminion.aiservice.common.ai.response.AiGenerateResponse;
 import com.aiminion.aiservice.common.ai.response.AiResponse;
 import com.aiminion.aiservice.common.enums.AiProvider;
 import com.aiminion.aiservice.common.enums.FeatureType;
+import com.aiminion.aiservice.common.sanitizer.service.SanitizerService;
 import com.aiminion.aiservice.feature.BaseAiServiceGenerator;
 import com.aiminion.aiservice.feature.integration.ProcessingStorageClient;
 import com.aiminion.aiservice.feature.imageOverlay.request.OverlayRequest;
@@ -39,6 +40,7 @@ public class ContentImageV2AiService
     private final ImageOverlayService imageOverlayService;
     private final AiContentTextGenerator aiContentTextGenerator;
     private final ProcessingStorageClient processingStorageClient;
+    private final SanitizerService sanitizerService;
 
     @Override
     public FeatureType getFeatureType() {
@@ -48,6 +50,10 @@ public class ContentImageV2AiService
     @Override
     public AiGenerateResponse handle(AiGenerateRequest request, ObjectMapper objectMapper) {
         ContentImageV2Request req = objectMapper.convertValue(request.payload(), ContentImageV2Request.class);
+
+        // Sanitizer for GENERATE_CONTENT_IMAGE_V2
+        sanitizerService.sanitize(req.prompt(), FeatureType.GENERATE_CONTENT_IMAGE_V2 , request.provider());
+
         ContentImageV2Response result = generate(req);
         return AiGenerateResponse.builder()
                 .featureType(FeatureType.GENERATE_CONTENT_IMAGE_V2)

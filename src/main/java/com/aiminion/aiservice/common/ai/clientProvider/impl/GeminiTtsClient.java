@@ -25,6 +25,8 @@ import java.util.stream.Collectors;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
+import static com.aiminion.aiservice.common.util.AIStyles.GEMINI_VOICE_CATALOG;
+
 @Slf4j
 @Component
 public class GeminiTtsClient implements TtsClient {
@@ -47,41 +49,7 @@ public class GeminiTtsClient implements TtsClient {
     private static final String GEMINI_TTS_URL =
             "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s";
 
-    /**
-     * Gemini prebuilt TTS voices with style labels (Google naming). {@code id} is the API voiceName (lowercase).
-     */
-    private static final List<VoiceModelDescriptor> GEMINI_VOICE_CATALOG = List.of(
-            new VoiceModelDescriptor("zephyr", "Bright"),
-            new VoiceModelDescriptor("puck", "Upbeat"),
-            new VoiceModelDescriptor("charon", "Informative"),
-            new VoiceModelDescriptor("kore", "Firm"),
-            new VoiceModelDescriptor("fenrir", "Excitable"),
-            new VoiceModelDescriptor("leda", "Youthful"),
-            new VoiceModelDescriptor("orus", "Firm"),
-            new VoiceModelDescriptor("aoede", "Breezy"),
-            new VoiceModelDescriptor("callirrhoe", "Easy-going"),
-            new VoiceModelDescriptor("autonoe", "Bright"),
-            new VoiceModelDescriptor("enceladus", "Breathy"),
-            new VoiceModelDescriptor("iapetus", "Clear"),
-            new VoiceModelDescriptor("umbriel", "Easy-going"),
-            new VoiceModelDescriptor("algieba", "Smooth"),
-            new VoiceModelDescriptor("despina", "Smooth"),
-            new VoiceModelDescriptor("erinome", "Clear"),
-            new VoiceModelDescriptor("algenib", "Gravelly"),
-            new VoiceModelDescriptor("rasalgethi", "Informative"),
-            new VoiceModelDescriptor("laomedeia", "Upbeat"),
-            new VoiceModelDescriptor("achernar", "Soft"),
-            new VoiceModelDescriptor("alnilam", "Firm"),
-            new VoiceModelDescriptor("schedar", "Even"),
-            new VoiceModelDescriptor("gacrux", "Mature"),
-            new VoiceModelDescriptor("pulcherrima", "Forward"),
-            new VoiceModelDescriptor("achird", "Friendly"),
-            new VoiceModelDescriptor("zubenelgenubi", "Casual"),
-            new VoiceModelDescriptor("vindemiatrix", "Gentle"),
-            new VoiceModelDescriptor("sadachbia", "Lively"),
-            new VoiceModelDescriptor("sadaltager", "Knowledgeable"),
-            new VoiceModelDescriptor("sulafat", "Warm")
-    );
+
 
     private static final Set<String> SUPPORTED_GEMINI_VOICES = GEMINI_VOICE_CATALOG.stream()
             .map(VoiceModelDescriptor::id)
