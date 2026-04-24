@@ -8,6 +8,7 @@ import com.aiminion.aiservice.common.ai.request.AiRequest;
 import com.aiminion.aiservice.common.ai.response.AiGenerateResponse;
 import com.aiminion.aiservice.common.ai.response.AiResponse;
 import com.aiminion.aiservice.common.enums.FeatureType;
+import com.aiminion.aiservice.common.util.AIStyles;
 import com.aiminion.aiservice.feature.BaseAiServiceGenerator;
 import com.aiminion.aiservice.feature.request.TranslateRequest;
 import com.aiminion.aiservice.feature.response.TranslateResponse;
@@ -15,6 +16,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Slf4j
 @Service
@@ -41,13 +44,23 @@ public class TranslateAiService implements BaseAiServiceGenerator<TranslateReque
                 request.payload(), TranslateRequest.class
         );
 
-        // Top-level provider takes precedence over payload provider
         if (request.provider() != null) {
             translateRequest = TranslateRequest.builder()
                     .text(translateRequest.text())
 
                     .style(translateRequest.style())
                     .provider(request.provider())
+                    .build();
+        }
+
+        boolean getStyles = request.payload().path("getStyles").asBoolean(false);
+        if(getStyles){
+            TranslateResponse result = getTranslateStyles(translateRequest);
+
+            return AiGenerateResponse.builder()
+                    .featureType(FeatureType.TRANSLATE)
+                    .usedProvider(result.usedProvider())
+                    .result(result)
                     .build();
         }
 
@@ -60,7 +73,20 @@ public class TranslateAiService implements BaseAiServiceGenerator<TranslateReque
                 .build();
     }
 
-    // BaseAiServiceGenerator
+    private TranslateResponse getTranslateStyles(TranslateRequest translateRequest) {
+        AiRequest aiRequest = AiRequest.builder()
+                .systemPrompt(promptBuilderImpl.buildTranslateStylePrompt())
+                .userMessage(translateRequest.text())
+                .provider(translateRequest.provider())
+                .build();
+
+        List<String> aiLatestModels = aiContentTextGenerator.getAiLatestModels(aiRequest);
+
+        return TranslateResponse.builder()
+                .aiLatestModels(aiLatestModels)
+                .styles(AIStyles.getTranslateStyles())
+                .build();
+    }
 
     @Override
     public TranslateResponse generate(TranslateRequest req) {

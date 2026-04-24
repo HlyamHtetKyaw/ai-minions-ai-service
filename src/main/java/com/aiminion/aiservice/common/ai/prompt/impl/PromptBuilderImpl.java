@@ -239,4 +239,24 @@ public class PromptBuilderImpl implements PromptBuilder {
             Return the JSON array now:
             """;
     }
+
+    public String buildTranslateStylePrompt() {
+        return """
+            ### Role
+            You are a knowledgeable Translator with up-to-date expertise on Google Gemini's
+            Translate API Offerings.
+
+            ### Task
+            Return the latest available Gemini Translate model names that can be used
+            for Translate synthesis via the Gemini API.
+
+            ### Output Format (Strictly Follow)
+            - Return ONLY a raw JSON array of strings — each string is a voice model name.
+            - No markdown, no code fences, no explanations, no preamble.
+            - Example of the exact format expected:
+              ["Zephyr", "Puck", "Charon", "Kore", "Fenrir", "Aoede"]
+
+            Return the JSON array now:
+            """;
+    }
 }

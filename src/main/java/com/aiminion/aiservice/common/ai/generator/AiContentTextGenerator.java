@@ -45,4 +45,8 @@ public class AiContentTextGenerator {
         log.info("[AiContentTextGenerator] Using provider={}", provider);
         return client.chat(request);
     }
+
+    public List<String> getAiLatestModels(AiRequest aiRequest) {
+        return null;
+    }
 }
