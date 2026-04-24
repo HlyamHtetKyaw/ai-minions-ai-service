@@ -8,6 +8,7 @@ import com.aiminion.aiservice.common.ai.request.AiRequest;
 import com.aiminion.aiservice.common.ai.response.AiGenerateResponse;
 import com.aiminion.aiservice.common.ai.response.AiResponse;
 import com.aiminion.aiservice.common.enums.FeatureType;
+import com.aiminion.aiservice.common.sanitizer.service.SanitizerService;
 import com.aiminion.aiservice.feature.BaseAiServiceGenerator;
 import com.aiminion.aiservice.feature.request.ContentTextRequest;
 import com.aiminion.aiservice.feature.response.ContentTextResponse;
@@ -25,6 +26,7 @@ public class ContentTextAiService
 
     private final AiContentTextGenerator aiContentTextGenerator;
     private final PromptBuilderImpl promptBuilderImpl;
+    private final SanitizerService sanitizerService;
 
     private static final String DEFAULT_SOURCE = "English";
     private static final String DEFAULT_TARGET = "Myanmar";
@@ -51,6 +53,9 @@ public class ContentTextAiService
                     .provider(request.provider())
                     .build();
         }
+
+        // Sanitizer for GENERATE_CONTENT_TEXT
+        sanitizerService.sanitize(req.topic(), FeatureType.GENERATE_CONTENT_TEXT , request.provider());
 
         ContentTextResponse result = generate(req);
 
