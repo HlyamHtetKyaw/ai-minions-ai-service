@@ -9,21 +9,10 @@ public class AIStyles {
 
     public static List<String> getTranslateStyles(){
         return List.of(
-                "natural",
-                "friendly",
-                "professional",
-                "formal",
-                "casual",
-                "polite",
-                "serious",
-                "cheerful",
-                "sad",
-                "angry",
-                "excited",
-                "calm",
-                "relaxed",
-                "confident",
-                "authoritative"
+                "casual_social_media",
+                "polite_educational",
+                "formal_corporate",
+                "youthful_trendy"
         );
     }
 

@@ -17,6 +17,7 @@ public class PromptBuilderImpl implements PromptBuilder {
         String source = params[0];
         String target = params[1];
         String style  = params[2];
+        String styleInstruction = buildTranslateStyleInstruction(style, target);
 
         return String.format("""
                 You are a professional translator with deep expertise in %s and %s linguistics.
@@ -24,10 +25,49 @@ public class PromptBuilderImpl implements PromptBuilder {
                 Your task:
                 - Translate the user's text from %s → %s.
                 - Apply a "%s" tone/style consistently throughout.
+                %s
                 - Preserve the original meaning, nuance, and formatting (line breaks, punctuation).
                 - For Myanmar/Burmese output, use Unicode (UTF-8) script.
                 - Return ONLY the translated text — no explanations, no labels, no extra content.
-                """, source, target, source, target, style);
+                """, source, target, source, target, style, styleInstruction);
+    }
+
+    private String buildTranslateStyleInstruction(String style, String target) {
+        String normalizedStyle = style == null ? "" : style.trim().toLowerCase();
+        String normalizedTarget = target == null ? "" : target.trim().toLowerCase();
+        boolean targetIsBurmese = normalizedTarget.contains("burmese") || normalizedTarget.contains("myanmar");
+
+        if (!targetIsBurmese) {
+            return "- Match the requested style while keeping grammar and word choice native to the target language.";
+        }
+
+        return switch (normalizedStyle) {
+            case "casual_social_media" -> """
+                - Burmese diglossia rule (MANDATORY): use spoken Burmese (စကားပြောဟန် / Zaga Pyaw), not literary Burmese.
+                - Keep the output natural and conversational for social media; use spoken particles (e.g. တယ်, ရဲ့, ပြီး) and avoid literary particles (e.g. သည်, ၏, ၍).
+                - The voice should sound like a creator speaking naturally to friends or followers.
+                """;
+            case "polite_educational" -> """
+                - Burmese diglossia rule (MANDATORY): use spoken Burmese (စကားပြောဟန် / Zaga Pyaw), not literary Burmese.
+                - Keep a polite, respectful educational tone for audience-facing content; frequently use polite particles such as "ပါ" where natural.
+                - Do not drift into stiff literary grammar.
+                """;
+            case "formal_corporate" -> """
+                - Burmese diglossia rule (MANDATORY): use literary Burmese (စာပေဟန် / Sape) consistently.
+                - Use formal, professional wording and literary particles (e.g. သည်, ၏, ၍) suitable for official business communication.
+                - Do not mix spoken colloquial grammar into this mode.
+                """;
+            case "youthful_trendy" -> """
+                - Burmese diglossia rule (MANDATORY): use spoken Burmese (စကားပြောဟန် / Zaga Pyaw), not literary Burmese.
+                - Keep the style punchy, youthful, and trend-aware; modern slang or selective transliterated English terms are allowed when natural.
+                - Maintain readability and avoid mixing incompatible spoken/literary grammar in the same sentence.
+                """;
+            default -> """
+                - Burmese diglossia rule (MANDATORY): choose one grammar register and stay consistent.
+                - Prefer spoken Burmese (စကားပြောဟန် / Zaga Pyaw) unless the user explicitly asks for literary formal output.
+                - Do not mix spoken and literary particles in a single sentence.
+                """;
+        };
     }
 
     public String buildContentTextPrompt(String... params) {
