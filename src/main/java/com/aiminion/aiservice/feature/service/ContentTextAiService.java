@@ -97,8 +97,26 @@ public class ContentTextAiService
     }
 
     /**
-     * Extracts content between [TAG]: and the next [TAG] or end of string.
-     * e.g. "[TITLE]: My Title\n[CONTENT]: ..." → "My Title"
+     * Only these headers delimit sections. Scripts/captions use many other bracketed lines
+     * (e.g. {@code [Visual:]}, {@code [B-Roll:]}) — stopping at the next {@code [} would truncate
+     * {@code [CONTENT]} to empty.
+     */
+    private static final String[] TOP_LEVEL_SECTION_MARKERS = {"[TITLE]:", "[CONTENT]:"};
+
+    private static int findNextTopLevelSectionStart(String raw, int fromIndex) {
+        int best = -1;
+        for (String m : TOP_LEVEL_SECTION_MARKERS) {
+            int idx = raw.indexOf(m, fromIndex);
+            if (idx >= 0 && (best < 0 || idx < best)) {
+                best = idx;
+            }
+        }
+        return best;
+    }
+
+    /**
+     * Extracts content between {@code [TAG]:} and the next top-level {@code [TITLE]:} / {@code [CONTENT]:}
+     * (or end of string). e.g. "[TITLE]: My Title\n[CONTENT]: ..." → title "My Title".
      */
     private String parseSection(String raw, String tag) {
         String marker = "[" + tag + "]:";
@@ -109,8 +127,7 @@ public class ContentTextAiService
         }
         start += marker.length();
 
-        // Find next tag marker or end of string
-        int end = raw.indexOf("[", start);
+        int end = findNextTopLevelSectionStart(raw, start);
         String section = end == -1 ? raw.substring(start) : raw.substring(start, end);
         return section.trim();
     }

@@ -74,7 +74,9 @@ public class ContentImageV2AiService
                 req.toonStyle(),
                 firstNonBlank(aiOverlayText, userOverlayText, req.prompt()),
                 req.logoUrl(),
-                req.photoUrl()
+                req.photoUrl(),
+                req.contentType(),
+                req.tone()
         );
 
         byte[] imageBytes;

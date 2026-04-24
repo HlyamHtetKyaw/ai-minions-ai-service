@@ -69,11 +69,15 @@ public class GeminiImageGenerator {
             String toonStyle,
             String shortText,
             String logoDataUri,
-            String photoDataUri
+            String photoDataUri,
+            String contentTypeHint,
+            String toneHint
     ) {
+        String creativeBrief = formatCreativeBrief(contentTypeHint, toneHint);
         String enhancedPrompt = """
-                Create a high-quality social media image in toon/comic style.
-                Keep the layout clean and visually clear.
+                Create a high-quality image suitable for social sharing.
+                %sFollow the Style hint for art direction (line work, color, lighting, level of realism vs illustration). Do not contradict it.
+                Keep composition clear and readable at a glance unless the Style hint calls for a different treatment.
                 Do not add any watermark.
                 Do not render any readable text inside the artwork.
                 No speech bubbles, no signs, no labels, no letters, and no numbers.
@@ -84,7 +88,7 @@ public class GeminiImageGenerator {
                 Aspect hint: %s.
                 Style hint: %s.
                 Scene request: %s
-                """.formatted(size, normalizeStyle(toonStyle), prompt);
+                """.formatted(creativeBrief, size, normalizeStyle(toonStyle), prompt);
 
         List<Map<String, Object>> parts = new ArrayList<>();
         parts.add(Map.of("text", enhancedPrompt));
@@ -272,9 +276,37 @@ public class GeminiImageGenerator {
         return oneLine.length() <= 200 ? oneLine : oneLine.substring(0, 200) + "...";
     }
 
+    /** Default comic / western graphic-novel toon preset (keep aligned with frontend {@code DEFAULT_TOON_STYLE}). */
+    private static final String DEFAULT_TOON_STYLE_FALLBACK =
+            "Western graphic novel toon: heavy bold outlines, aggressive shading with optional cross-hatching, high-energy composition; "
+                    + "strong black linework defining forms, dramatic speed-line or energetic background, bold saturated colors flatter than photo realism, "
+                    + "intense expressive faces.";
+
+    /**
+     * Optional copy-format and tone from content v2 — steers scene composition and atmosphere without adding readable text in-frame.
+     */
+    private static String formatCreativeBrief(String contentType, String tone) {
+        String ct = contentType == null ? "" : contentType.trim();
+        String tn = tone == null ? "" : tone.trim();
+        if (ct.isEmpty() && tn.isEmpty()) {
+            return "";
+        }
+        StringBuilder b = new StringBuilder("Creative direction: ");
+        if (!ct.isEmpty()) {
+            b.append("Content format role is ")
+                    .append(ct)
+                    .append(" (interpret as a single clear social-ready visual; do not paint caption text into the image). ");
+        }
+        if (!tn.isEmpty()) {
+            b.append("Mood and energy should feel ").append(tn).append(". ");
+        }
+        b.append("\n");
+        return b.toString();
+    }
+
     private String normalizeStyle(String toonStyle) {
         if (toonStyle == null || toonStyle.isBlank()) {
-            return "toon comic illustration, expressive characters, vibrant cinematic colors";
+            return DEFAULT_TOON_STYLE_FALLBACK;
         }
         return toonStyle.trim();
     }

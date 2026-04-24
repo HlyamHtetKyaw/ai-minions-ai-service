@@ -49,5 +49,11 @@ public record ContentImageV2Request(
         String photoPosition,
         Integer photoWidth,
         Integer photoHeight,
-        Integer photoMargin
+        Integer photoMargin,
+
+        @Schema(description = "Social copy format (hook, caption, hashtags, script) — steers scene intent for the image")
+        String contentType,
+
+        @Schema(description = "Voice / mood (matches text leg: inspiring, funny, …) — steers atmosphere and energy")
+        String tone
 ){}
