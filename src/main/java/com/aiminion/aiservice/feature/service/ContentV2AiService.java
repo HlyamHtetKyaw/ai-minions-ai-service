@@ -102,6 +102,8 @@ public class ContentV2AiService
                 .photoWidth(req.photoWidth())
                 .photoHeight(req.photoHeight())
                 .photoMargin(req.photoMargin())
+                .contentType(req.contentType())
+                .tone(req.style())
                 .build();
         ContentImageV2Response image = contentImageV2AiService.generate(imageReq);
         ContentTextResponse syncedText = ContentTextResponse.builder()

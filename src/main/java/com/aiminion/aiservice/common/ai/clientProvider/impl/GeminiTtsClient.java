@@ -2,13 +2,13 @@ package com.aiminion.aiservice.common.ai.clientProvider.impl;
 
 import com.aiminion.aiservice.common.ai.clientProvider.TtsClient;
 import com.aiminion.aiservice.common.enums.AiProvider;
+import com.aiminion.aiservice.feature.response.VoiceModelDescriptor;
 import com.aiminion.aiservice.feature.response.VoiceOverResponse;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.StreamReadConstraints;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Component;
@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
@@ -46,12 +47,45 @@ public class GeminiTtsClient implements TtsClient {
     private static final String GEMINI_TTS_URL =
             "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s";
 
-    private static final Set<String> SUPPORTED_GEMINI_VOICES = Set.of(
-            "achernar", "achird", "algenib", "algieba", "alnilam", "aoede", "autonoe", "callirrhoe",
-            "charon", "despina", "enceladus", "erinome", "fenrir", "gacrux", "iapetus", "kore",
-            "laomedeia", "leda", "orus", "puck", "pulcherrima", "rasalgethi", "sadachbia",
-            "sadaltager", "schedar", "sulafat", "umbriel", "vindemiatrix", "zephyr", "zubenelgenubi"
+    /**
+     * Gemini prebuilt TTS voices with style labels (Google naming). {@code id} is the API voiceName (lowercase).
+     */
+    private static final List<VoiceModelDescriptor> GEMINI_VOICE_CATALOG = List.of(
+            new VoiceModelDescriptor("zephyr", "Bright"),
+            new VoiceModelDescriptor("puck", "Upbeat"),
+            new VoiceModelDescriptor("charon", "Informative"),
+            new VoiceModelDescriptor("kore", "Firm"),
+            new VoiceModelDescriptor("fenrir", "Excitable"),
+            new VoiceModelDescriptor("leda", "Youthful"),
+            new VoiceModelDescriptor("orus", "Firm"),
+            new VoiceModelDescriptor("aoede", "Breezy"),
+            new VoiceModelDescriptor("callirrhoe", "Easy-going"),
+            new VoiceModelDescriptor("autonoe", "Bright"),
+            new VoiceModelDescriptor("enceladus", "Breathy"),
+            new VoiceModelDescriptor("iapetus", "Clear"),
+            new VoiceModelDescriptor("umbriel", "Easy-going"),
+            new VoiceModelDescriptor("algieba", "Smooth"),
+            new VoiceModelDescriptor("despina", "Smooth"),
+            new VoiceModelDescriptor("erinome", "Clear"),
+            new VoiceModelDescriptor("algenib", "Gravelly"),
+            new VoiceModelDescriptor("rasalgethi", "Informative"),
+            new VoiceModelDescriptor("laomedeia", "Upbeat"),
+            new VoiceModelDescriptor("achernar", "Soft"),
+            new VoiceModelDescriptor("alnilam", "Firm"),
+            new VoiceModelDescriptor("schedar", "Even"),
+            new VoiceModelDescriptor("gacrux", "Mature"),
+            new VoiceModelDescriptor("pulcherrima", "Forward"),
+            new VoiceModelDescriptor("achird", "Friendly"),
+            new VoiceModelDescriptor("zubenelgenubi", "Casual"),
+            new VoiceModelDescriptor("vindemiatrix", "Gentle"),
+            new VoiceModelDescriptor("sadachbia", "Lively"),
+            new VoiceModelDescriptor("sadaltager", "Knowledgeable"),
+            new VoiceModelDescriptor("sulafat", "Warm")
     );
+
+    private static final Set<String> SUPPORTED_GEMINI_VOICES = GEMINI_VOICE_CATALOG.stream()
+            .map(VoiceModelDescriptor::id)
+            .collect(Collectors.toUnmodifiableSet());
 
     private static final Map<String, String> VOICE_ALIASES = buildVoiceAliases();
     private static final int MAX_TTS_JSON_STRING_LENGTH = 50_000_000;
@@ -74,6 +108,11 @@ public class GeminiTtsClient implements TtsClient {
     @Override
     public AiProvider getProvider() {
         return AiProvider.GEMINI;
+    }
+
+    @Override
+    public List<VoiceModelDescriptor> listVoiceModels() {
+        return GEMINI_VOICE_CATALOG;
     }
 
     /**

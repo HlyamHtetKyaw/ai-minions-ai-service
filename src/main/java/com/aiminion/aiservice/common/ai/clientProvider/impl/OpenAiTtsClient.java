@@ -1,6 +1,7 @@
 package com.aiminion.aiservice.common.ai.clientProvider.impl;
 import com.aiminion.aiservice.common.ai.clientProvider.TtsClient;
 import com.aiminion.aiservice.common.enums.AiProvider;
+import com.aiminion.aiservice.feature.response.VoiceModelDescriptor;
 import com.aiminion.aiservice.feature.response.VoiceOverResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -9,11 +10,20 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.Base64;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Slf4j
 @Component
 public class OpenAiTtsClient implements TtsClient {
+
+    /**
+     * OpenAI TTS preset voices (Audio / speech API). Kept aligned with provider documentation.
+     */
+    private static final Set<String> SUPPORTED_OPENAI_VOICES = Set.of(
+            "alloy", "ash", "ballad", "coral", "echo", "fable", "onyx", "nova", "sage", "shimmer", "verse"
+    );
 
     private final RestTemplate restTemplate;
 
@@ -33,6 +43,14 @@ public class OpenAiTtsClient implements TtsClient {
     @Override
     public AiProvider getProvider() {
         return AiProvider.OPENAI;
+    }
+
+    @Override
+    public List<VoiceModelDescriptor> listVoiceModels() {
+        return SUPPORTED_OPENAI_VOICES.stream()
+                .sorted()
+                .map(id -> new VoiceModelDescriptor(id, ""))
+                .toList();
     }
 
     @Override

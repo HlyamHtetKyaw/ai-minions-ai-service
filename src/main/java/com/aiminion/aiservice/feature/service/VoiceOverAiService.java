@@ -2,11 +2,8 @@ package com.aiminion.aiservice.feature.service;
 
 import com.aiminion.aiservice.common.ai.generator.AiVoiceOverGenerator;
 import com.aiminion.aiservice.common.ai.handler.AiFeatureHandler;
-import com.aiminion.aiservice.common.ai.prompt.impl.PromptBuilderImpl;
 import com.aiminion.aiservice.common.ai.request.AiGenerateRequest;
-import com.aiminion.aiservice.common.ai.request.AiRequest;
 import com.aiminion.aiservice.common.ai.response.AiGenerateResponse;
-import com.aiminion.aiservice.common.ai.response.AiResponse;
 import com.aiminion.aiservice.common.enums.AiProvider;
 import com.aiminion.aiservice.common.enums.FeatureType;
 import com.aiminion.aiservice.common.util.AIStyles;
@@ -14,6 +11,9 @@ import com.aiminion.aiservice.common.util.MediaFileNameGenerator;
 import com.aiminion.aiservice.feature.BaseAiServiceGenerator;
 import com.aiminion.aiservice.feature.integration.ProcessingStorageClient;
 import com.aiminion.aiservice.feature.request.VoiceOverRequest;
+import com.aiminion.aiservice.feature.response.VoiceModelDescriptor;
+import com.aiminion.aiservice.feature.response.VoiceOverModelsResponse;
+import com.aiminion.aiservice.feature.response.VoiceOverProviderModels;
 import com.aiminion.aiservice.feature.response.VoiceOverResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +21,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+
+import static java.util.Collections.singletonList;
 
 @Slf4j
 @Service
@@ -30,7 +32,6 @@ public class VoiceOverAiService implements BaseAiServiceGenerator<VoiceOverReque
     private final AiVoiceOverGenerator aiVoiceOverGenerator;
     private final MediaFileNameGenerator mediaFileNameGenerator;
     private final ProcessingStorageClient processingStorageClient;
-    private final PromptBuilderImpl promptBuilderImpl;
 
     private static final String DEFAULT_SOURCE = "English";
     private static final String DEFAULT_TARGET = "Myanmar";
@@ -59,13 +60,21 @@ public class VoiceOverAiService implements BaseAiServiceGenerator<VoiceOverReque
                     .build();
         }
 
-        boolean getStyles = request.payload().path("getStyles").asBoolean(false);
-        if (getStyles) {
-            VoiceOverResponse result = getAiVoiceOverData(req);
+        boolean listModels = request.payload().path("getVoiceModels").asBoolean(false)
+                || request.payload().path("getStyles").asBoolean(false);
+        if (listModels) {
+            AiProvider p = req.provider() != null ? req.provider() : AiProvider.GEMINI;
+            List<VoiceModelDescriptor> models = aiVoiceOverGenerator.listVoiceModels(p);
+            VoiceOverModelsResponse result = VoiceOverModelsResponse.builder()
+                    .providers(singletonList(VoiceOverProviderModels.builder()
+                            .provider(p.name())
+                            .models(models)
+                            .build()))
+                    .build();
 
             return AiGenerateResponse.builder()
                     .featureType(FeatureType.VOICEOVER)
-                    .usedProvider(req.provider())
+                    .usedProvider(p)
                     .result(result)
                     .build();
         }
@@ -79,21 +88,23 @@ public class VoiceOverAiService implements BaseAiServiceGenerator<VoiceOverReque
                 .build();
     }
 
-    private VoiceOverResponse getAiVoiceOverData(VoiceOverRequest req) {
-        AiRequest aiRequest = AiRequest.builder()
-                .systemPrompt(promptBuilderImpl.buildVoiceOverDataPrompt())
-                .userMessage("List the latest available Gemini TTS voice models.")
-                .provider(req.provider())
-                .build();
-
-        List<String> aiLatestModels = aiVoiceOverGenerator.generate(aiRequest);
-
-        return VoiceOverResponse.builder()
-                .aiLatestModels(aiLatestModels)
-                .styles(AIStyles.voiceOverStyles())
-                .build();
-    }
-
+//=======
+//    private VoiceOverResponse getAiVoiceOverData(VoiceOverRequest req) {
+//        AiRequest aiRequest = AiRequest.builder()
+//                .systemPrompt(promptBuilderImpl.buildVoiceOverDataPrompt())
+//                .userMessage("List the latest available Gemini TTS voice models.")
+//                .provider(req.provider())
+//                .build();
+//
+//        List<String> aiLatestModels = aiVoiceOverGenerator.generate(aiRequest);
+//
+//        return VoiceOverResponse.builder()
+//                .aiLatestModels(aiLatestModels)
+//                .styles(AIStyles.voiceOverStyles())
+//                .build();
+//    }
+//
+//>>>>>>> 1ac1bb318ba4de2855c3c95fbcb50edcad2afbaf
     @Override
     public VoiceOverResponse generate(VoiceOverRequest req) {
         String source     = isBlank(req.sourceLanguage()) ? DEFAULT_SOURCE      : req.sourceLanguage().trim();
