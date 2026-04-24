@@ -6,6 +6,7 @@ import com.aiminion.aiservice.common.ai.request.AiGenerateRequest;
 import com.aiminion.aiservice.common.ai.response.AiGenerateResponse;
 import com.aiminion.aiservice.common.enums.AiProvider;
 import com.aiminion.aiservice.common.enums.FeatureType;
+import com.aiminion.aiservice.common.util.AIStyles;
 import com.aiminion.aiservice.common.util.MediaFileNameGenerator;
 import com.aiminion.aiservice.feature.BaseAiServiceGenerator;
 import com.aiminion.aiservice.feature.integration.ProcessingStorageClient;
@@ -87,6 +88,23 @@ public class VoiceOverAiService implements BaseAiServiceGenerator<VoiceOverReque
                 .build();
     }
 
+//=======
+//    private VoiceOverResponse getAiVoiceOverData(VoiceOverRequest req) {
+//        AiRequest aiRequest = AiRequest.builder()
+//                .systemPrompt(promptBuilderImpl.buildVoiceOverDataPrompt())
+//                .userMessage("List the latest available Gemini TTS voice models.")
+//                .provider(req.provider())
+//                .build();
+//
+//        List<String> aiLatestModels = aiVoiceOverGenerator.generate(aiRequest);
+//
+//        return VoiceOverResponse.builder()
+//                .aiLatestModels(aiLatestModels)
+//                .styles(AIStyles.voiceOverStyles())
+//                .build();
+//    }
+//
+//>>>>>>> 1ac1bb318ba4de2855c3c95fbcb50edcad2afbaf
     @Override
     public VoiceOverResponse generate(VoiceOverRequest req) {
         String source     = isBlank(req.sourceLanguage()) ? DEFAULT_SOURCE      : req.sourceLanguage().trim();

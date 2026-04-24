@@ -18,5 +18,6 @@ public record VoiceOverResponse(
         AiProvider usedProvider,
         Integer tokenIn,
         Integer tokenOut,
-        List<String> aiLatestModels
+        List<String> aiLatestModels,
+        List<String> styles
 ) {}
