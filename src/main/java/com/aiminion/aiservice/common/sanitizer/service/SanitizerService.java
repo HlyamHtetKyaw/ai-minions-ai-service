@@ -33,7 +33,7 @@ public class SanitizerService {
      * @param content     raw user text to inspect
      * @param featureType the feature context (used to tailor the prompt)
      */
-    public void sanitize(String content, FeatureType featureType , AiProvider provider) {
+    public void sanitize(String content, FeatureType featureType, AiProvider provider) {
         if (content == null || content.isBlank()) {
             log.debug("[Sanitizer] Empty content — skipping check.");
             return;
@@ -41,28 +41,58 @@ public class SanitizerService {
 
         provider = (provider == null) ? defaultProvider : provider;
 
-        String systemPrompt = promptBuilderImpl.buildSanitizationPrompt(content, featureType);
+        try {
+            String systemPrompt = promptBuilderImpl.buildSanitizationPrompt(content, featureType);
 
-        AiRequest aiRequest = AiRequest.builder()
-                .systemPrompt(systemPrompt)
-                .provider(provider)
-                .userMessage("Classify the text provided in the system prompt.")
-                .build();
+            AiRequest aiRequest = AiRequest.builder()
+                    .systemPrompt(systemPrompt)
+                    .provider(provider)
+                    .userMessage("Classify the text provided in the system prompt.")
+                    .build();
 
-        AiResponse aiResponse = aiContentTextGenerator.generate(aiRequest);
-        String raw = aiResponse.content();
+            AiResponse aiResponse = aiContentTextGenerator.generate(aiRequest);
+            String raw = aiResponse.content();
 
-        log.debug("[Sanitizer] Raw AI verdict for feature={}: {}", featureType, raw);
+            log.debug("[Sanitizer] Raw AI verdict for feature={}: {}", featureType, raw);
 
-        SanitizationResult result = parse(raw);
+            SanitizationResult result = parse(raw);
 
-        if (!result.safe()) {
-            log.warn("[Sanitizer] BLOCKED — feature={} category={} reason={}",
-                    featureType, result.category(), result.reason());
-            throw new ContentViolationException(result.category(), result.reason());
+            if (!result.safe()) {
+                log.warn(
+                        "[Sanitizer] BLOCKED — feature={} category={} reason={}",
+                        featureType,
+                        result.category(),
+                        result.reason()
+                );
+
+                throw new ContentViolationException(
+                        result.category(),
+                        result.reason()
+                );
+            }
+
+            log.info(
+                    "[Sanitizer] PASSED — feature={} category={}",
+                    featureType,
+                    result.category()
+            );
+
+        } catch (ContentViolationException ex) {
+            throw ex;
+
+        } catch (Exception ex) {
+            log.error(
+                    "[Sanitizer] Unexpected error while sanitizing content. " +
+                            "feature={}, provider={}",
+                    featureType,
+                    provider,
+                    ex
+            );
+
+            throw new IllegalStateException(
+                    "Unable to validate content at this time. Please try again."
+            );
         }
-
-        log.info("[Sanitizer] PASSED — feature={} category={}", featureType, result.category());
     }
 
     private SanitizationResult parse(String raw) {
