@@ -67,6 +67,26 @@ public class GlobalExceptionHandler {
 				.body(ApiResponse.fail(500, "Internal Server Error", null));
 	}
 
+	/**
+	 * Handles AI content moderation violations.
+	 * Returns HTTP 422 so frontend can properly display the error.
+	 */
+	@ExceptionHandler(ContentViolationException.class)
+	public ResponseEntity<ApiResponse<?>> handleContentViolation(ContentViolationException ex) {
+		log.warn("Content blocked: category={}, message={}",
+				ex.getCategory(), ex.getMessage());
+
+		Map<String, Object> details = new LinkedHashMap<>();
+		details.put("category", ex.getCategory());
+
+		return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+				.body(ApiResponse.fail(
+						HttpStatus.UNPROCESSABLE_ENTITY.value(),
+						ex.getMessage(),
+						details
+				));
+	}
+
 	private static String safeResponseBody(RestClientResponseException ex) {
 		try {
 			String s = ex.getResponseBodyAsString(StandardCharsets.UTF_8);
