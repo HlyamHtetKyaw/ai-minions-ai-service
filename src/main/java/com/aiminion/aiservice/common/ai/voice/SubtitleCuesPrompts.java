@@ -29,7 +29,8 @@ public final class SubtitleCuesPrompts {
 				OUTPUT LANGUAGE:
 				- If targetLanguage is "my": output subtitle text in Myanmar (Burmese).
 				- If the spoken audio is not Myanmar, translate to Myanmar while preserving meaning.
-				- If targetLanguage is not "my": output subtitle text in that language (still accurate to the audio).
+				- If targetLanguage is "original": output subtitle text in the same language as the spoken audio, and do NOT translate.
+				- If targetLanguage is not "my" or "original": output subtitle text in that language (still accurate to the audio).
 
 				CAPTION_RULES:
 				- Keep captions short and readable.
