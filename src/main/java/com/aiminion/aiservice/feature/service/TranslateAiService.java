@@ -9,6 +9,7 @@ import com.aiminion.aiservice.common.ai.response.AiGenerateResponse;
 import com.aiminion.aiservice.common.ai.response.AiResponse;
 import com.aiminion.aiservice.common.enums.AiProvider;
 import com.aiminion.aiservice.common.enums.FeatureType;
+import com.aiminion.aiservice.common.exception.ContentViolationException;
 import com.aiminion.aiservice.common.sanitizer.service.SanitizerService;
 import com.aiminion.aiservice.common.util.AIStyles;
 import com.aiminion.aiservice.feature.BaseAiServiceGenerator;
@@ -20,6 +21,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 @Slf4j
 @Service
@@ -33,8 +36,6 @@ public class TranslateAiService implements BaseAiServiceGenerator<TranslateReque
     private static final String DEFAULT_SOURCE = "English";
     private static final String DEFAULT_TARGET = "Myanmar";
     private static final String DEFAULT_STYLE  = "Formal";
-
-    //AiFeatureHandler
 
     @Override
     public FeatureType getFeatureType() {
@@ -51,17 +52,15 @@ public class TranslateAiService implements BaseAiServiceGenerator<TranslateReque
             translateRequest = TranslateRequest.builder()
                     .text(translateRequest.text())
                     .style(translateRequest.style())
+                    .sourceLanguage(translateRequest.sourceLanguage())
+                    .targetLanguage(translateRequest.targetLanguage())
                     .provider(request.provider())
                     .build();
         }
 
-        // Sanitize Method - checks for harmful content and throws if unsafe
-        sanitizerService.sanitize(translateRequest.text(), FeatureType.TRANSLATE , request.provider());
-
         boolean getStyles = request.payload().path("getStyles").asBoolean(false);
-        if(getStyles){
+        if (getStyles) {
             TranslateResponse result = getTranslateStyles(translateRequest);
-
             return AiGenerateResponse.builder()
                     .featureType(FeatureType.TRANSLATE)
                     .usedProvider(result.usedProvider())
@@ -69,7 +68,7 @@ public class TranslateAiService implements BaseAiServiceGenerator<TranslateReque
                     .build();
         }
 
-        TranslateResponse result = generate(translateRequest);
+        TranslateResponse result = generateParallel(translateRequest);
 
         return AiGenerateResponse.builder()
                 .featureType(FeatureType.TRANSLATE)
@@ -78,19 +77,62 @@ public class TranslateAiService implements BaseAiServiceGenerator<TranslateReque
                 .build();
     }
 
-    private TranslateResponse getTranslateStyles(TranslateRequest translateRequest) {
+    /**
+     * Fires sanitization and translation concurrently.
+     * Total latency ≈ max(sanitize, translate) instead of sanitize + translate.
+     * If sanitization fails the translation result is discarded and the violation is rethrown.
+     */
+    private TranslateResponse generateParallel(TranslateRequest req) {
+        String source = isBlank(req.sourceLanguage()) ? DEFAULT_SOURCE : req.sourceLanguage().trim();
+        String target = isBlank(req.targetLanguage()) ? DEFAULT_TARGET : req.targetLanguage().trim();
+        String style  = isBlank(req.style())          ? DEFAULT_STYLE  : req.style().trim();
+        AiProvider provider = req.provider();
+
+        log.info("[Translate] parallel start {}→{} style={}", source, target, style);
+
+        CompletableFuture<Void> sanitizeFuture = CompletableFuture.runAsync(() ->
+                sanitizerService.sanitize(req.text(), FeatureType.TRANSLATE, provider)
+        );
+
         AiRequest aiRequest = AiRequest.builder()
-                .systemPrompt(promptBuilderImpl.buildTranslateStylePrompt())
-                .userMessage(translateRequest.text())
-                .provider(translateRequest.provider())
+                .systemPrompt(promptBuilderImpl.buildTranslatePrompt(source, target, style))
+                .userMessage(req.text())
+                .provider(provider)
                 .build();
 
-        List<String> aiLatestModels = aiContentTextGenerator.getAiLatestModels(aiRequest);
+        CompletableFuture<AiResponse> translateFuture = CompletableFuture.supplyAsync(() ->
+                aiContentTextGenerator.generate(aiRequest)
+        );
 
-        return TranslateResponse.builder()
-                .aiLatestModels(aiLatestModels)
-                .styles(AIStyles.getTranslateStyles())
-                .build();
+        try {
+            sanitizeFuture.get();
+
+            AiResponse aiResponse = translateFuture.get();
+
+            log.info("[Translate] parallel done {}→{}", source, target);
+
+            return TranslateResponse.builder()
+                    .translatedText(aiResponse.content())
+                    .translatedFrom(source)
+                    .translatedTo(target)
+                    .style(style)
+                    .usedProvider(aiResponse.usedProvider())
+                    .tokenIn(aiResponse.tokenIn())
+                    .tokenOut(aiResponse.tokenOut())
+                    .build();
+
+        } catch (ExecutionException e) {
+            translateFuture.cancel(true);
+            Throwable cause = e.getCause();
+            if (cause instanceof ContentViolationException cve) throw cve;
+            if (cause instanceof RuntimeException re) throw re;
+            throw new IllegalStateException("Translation failed: " + cause.getMessage(), cause);
+
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            translateFuture.cancel(true);
+            throw new IllegalStateException("Translation interrupted", e);
+        }
     }
 
     @Override
@@ -99,7 +141,7 @@ public class TranslateAiService implements BaseAiServiceGenerator<TranslateReque
         String target = isBlank(req.targetLanguage()) ? DEFAULT_TARGET : req.targetLanguage().trim();
         String style  = isBlank(req.style())          ? DEFAULT_STYLE  : req.style().trim();
 
-        log.info("[Translate] {}→{} style={}", source, target, style);
+        log.info("[Translate] sequential {}→{} style={}", source, target, style);
 
         AiRequest aiRequest = AiRequest.builder()
                 .systemPrompt(promptBuilderImpl.buildTranslatePrompt(source, target, style))
@@ -117,6 +159,21 @@ public class TranslateAiService implements BaseAiServiceGenerator<TranslateReque
                 .usedProvider(aiResponse.usedProvider())
                 .tokenIn(aiResponse.tokenIn())
                 .tokenOut(aiResponse.tokenOut())
+                .build();
+    }
+
+    private TranslateResponse getTranslateStyles(TranslateRequest translateRequest) {
+        AiRequest aiRequest = AiRequest.builder()
+                .systemPrompt(promptBuilderImpl.buildTranslateStylePrompt())
+                .userMessage(translateRequest.text())
+                .provider(translateRequest.provider())
+                .build();
+
+        List<String> aiLatestModels = aiContentTextGenerator.getAiLatestModels(aiRequest);
+
+        return TranslateResponse.builder()
+                .aiLatestModels(aiLatestModels)
+                .styles(AIStyles.getTranslateStyles())
                 .build();
     }
 
