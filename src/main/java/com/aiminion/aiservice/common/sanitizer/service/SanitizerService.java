@@ -14,38 +14,54 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class SanitizerService {
 
-    private final PromptBuilderImpl        promptBuilderImpl;
-    private final AiContentTextGenerator   aiContentTextGenerator;
-    private final ObjectMapper             objectMapper;
+    private final PromptBuilderImpl      promptBuilderImpl;
+    private final AiContentTextGenerator aiContentTextGenerator;
+    private final ObjectMapper           objectMapper;
 
     @Value("${ai.tts-default-provider:GEMINI}")
     private AiProvider defaultProvider;
 
-    /**
-     * Runs an AI-powered safety check on {@code content}.
-     * Throws {@link ContentViolationException} if the content is deemed unsafe.
-     *
-     * @param content     raw user text to inspect
-     * @param featureType the feature context (used to tailor the prompt)
-     */
+    private static final int SHORT_TEXT_THRESHOLD = 60;
+    private static final List<String> TRIGGER_KEYWORDS = List.of(
+            "bomb", "kill", "hack", "exploit", "synthesize", "porn",
+            "suicide", "weapon", "ignore previous", "ignore instructions",
+            "override", "jailbreak", "disregard", "drug", "murder", "rape"
+    );
+
     public void sanitize(String content, FeatureType featureType, AiProvider provider) {
         if (content == null || content.isBlank()) {
-            log.debug("[Sanitizer] Empty content — skipping check.");
+            log.debug("[Sanitizer] Empty content — skipping.");
+            return;
+        }
+
+        // Fast local pre-check — no AI call needed for obviously safe content
+        if (isClearlyHarmless(content)) {
+            log.debug("[Sanitizer] Fast-pass — skipped AI check for short/clean content.");
             return;
         }
 
         provider = (provider == null) ? defaultProvider : provider;
+        runAiSanitizationCheck(content, featureType, provider);
+    }
 
+    private boolean isClearlyHarmless(String content) {
+        String lower = content.toLowerCase();
+        boolean hasTrigger = TRIGGER_KEYWORDS.stream().anyMatch(lower::contains);
+        if (hasTrigger) return false;
+        return content.length() <= SHORT_TEXT_THRESHOLD;
+    }
+
+    private void runAiSanitizationCheck(String content, FeatureType featureType, AiProvider provider) {
         try {
-            String systemPrompt = promptBuilderImpl.buildSanitizationPrompt(content, featureType);
-
             AiRequest aiRequest = AiRequest.builder()
-                    .systemPrompt(systemPrompt)
+                    .systemPrompt(promptBuilderImpl.buildSanitizationPrompt(content, featureType))
                     .provider(provider)
                     .userMessage("Classify the text provided in the system prompt.")
                     .build();
@@ -53,45 +69,23 @@ public class SanitizerService {
             AiResponse aiResponse = aiContentTextGenerator.generate(aiRequest);
             String raw = aiResponse.content();
 
-            log.debug("[Sanitizer] Raw AI verdict for feature={}: {}", featureType, raw);
+            log.debug("[Sanitizer] Raw AI verdict feature={}: {}", featureType, raw);
 
             SanitizationResult result = parse(raw);
 
             if (!result.safe()) {
-                log.warn(
-                        "[Sanitizer] BLOCKED — feature={} category={} reason={}",
-                        featureType,
-                        result.category(),
-                        result.reason()
-                );
-
-                throw new ContentViolationException(
-                        result.category(),
-                        result.reason()
-                );
+                log.warn("[Sanitizer] BLOCKED — feature={} category={} reason={}",
+                        featureType, result.category(), result.reason());
+                throw new ContentViolationException(result.category(), result.reason());
             }
 
-            log.info(
-                    "[Sanitizer] PASSED — feature={} category={}",
-                    featureType,
-                    result.category()
-            );
+            log.info("[Sanitizer] PASSED — feature={} category={}", featureType, result.category());
 
         } catch (ContentViolationException ex) {
             throw ex;
-
         } catch (Exception ex) {
-            log.error(
-                    "[Sanitizer] Unexpected error while sanitizing content. " +
-                            "feature={}, provider={}",
-                    featureType,
-                    provider,
-                    ex
-            );
-
-            throw new IllegalStateException(
-                    "Unable to validate content at this time. Please try again."
-            );
+            log.error("[Sanitizer] Unexpected error — feature={} provider={}", featureType, provider, ex);
+            throw new IllegalStateException("Unable to validate content at this time. Please try again.");
         }
     }
 

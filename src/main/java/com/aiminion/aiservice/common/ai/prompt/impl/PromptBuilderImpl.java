@@ -21,16 +21,10 @@ public class PromptBuilderImpl implements PromptBuilder {
         String styleInstruction = buildTranslateStyleInstruction(style, target);
 
         return String.format("""
-                You are a professional translator with deep expertise in %s and %s linguistics.
-
-                Your task:
-                - Translate the user's text from %s → %s.
-                - Apply a "%s" tone/style consistently throughout.
-                %s
-                - Preserve the original meaning, nuance, and formatting (line breaks, punctuation).
-                - For Myanmar/Burmese output, use Unicode (UTF-8) script.
-                - Return ONLY the translated text — no explanations, no labels, no extra content.
-                """, source, target, source, target, style, styleInstruction);
+            Translate from %s to %s. Style: %s. %s
+            Output ONLY the translated text. No explanations, no labels.
+            For Burmese: use Unicode script.
+            """, source, target, style, styleInstruction);
     }
 
     private String buildTranslateStyleInstruction(String style, String target) {
