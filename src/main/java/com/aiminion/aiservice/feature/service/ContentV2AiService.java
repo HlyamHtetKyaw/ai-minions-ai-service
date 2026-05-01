@@ -84,7 +84,7 @@ public class ContentV2AiService
                 .build();
         ContentTextResponse text = contentTextAiService.generate(textReq);
 
-        String imagePrompt = firstNonBlank(text.title(), req.topic(), text.generatedContent());
+        String imagePrompt = buildImagePrompt(req.topic(), text.title(), text.generatedContent());
         ContentImageV2Request imageReq = ContentImageV2Request.builder()
                 .prompt(imagePrompt)
                 .size(req.imageSize())
@@ -135,6 +135,29 @@ public class ContentV2AiService
             }
         }
         return "AI Generated";
+    }
+
+    private String buildImagePrompt(String topic, String title, String generatedContent) {
+        String topicText = firstNonBlank(topic);
+        String titleText = firstNonBlank(title, topicText);
+        String narrative = isBlank(generatedContent) ? "" : generatedContent.trim();
+        if (narrative.length() > 900) {
+            narrative = narrative.substring(0, 900);
+        }
+        if (narrative.isBlank()) {
+            return """
+                    Topic: %s
+                    Headline intent: %s
+                    Create one scene that directly matches the same subject and context.
+                    """.formatted(topicText, titleText);
+        }
+        return """
+                Topic: %s
+                Headline intent: %s
+                Narrative context to stay aligned with:
+                %s
+                Create one scene that directly matches the same subject and context; avoid unrelated replacements.
+                """.formatted(topicText, titleText, narrative);
     }
 
     private String resolveLanguage(String lang) {

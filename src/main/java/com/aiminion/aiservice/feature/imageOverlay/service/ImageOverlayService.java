@@ -5,6 +5,8 @@ import com.aiminion.aiservice.feature.imageOverlay.request.OverlayRequest;
 import com.aiminion.aiservice.feature.imageOverlay.response.OverlayResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.stereotype.Service;
 
 import javax.imageio.ImageIO;
@@ -22,6 +24,7 @@ import java.time.Instant;
 import java.util.Base64;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Collections;
 
 /**
  * Handles image composition — overlays logo and photo on a base image.
@@ -33,6 +36,7 @@ import java.util.ArrayList;
 public class ImageOverlayService {
 
     private final ImageOverlayConfig overlayConfig;
+    private volatile List<Font> bundledFonts;
 
     public OverlayResult compose(OverlayRequest request) {
         try {
@@ -323,6 +327,12 @@ public class ImageOverlayService {
     }
 
     private Font resolveFontForText(String text, int fontSize) {
+        for (Font base : getBundledFonts()) {
+            Font candidate = base.deriveFont(Font.BOLD, (float) fontSize);
+            if (candidate.canDisplayUpTo(text) == -1) {
+                return candidate;
+            }
+        }
         List<String> preferredFonts = List.of(
                 "Myanmar Text",
                 "Noto Sans Myanmar",
@@ -337,6 +347,38 @@ public class ImageOverlayService {
             }
         }
         return new Font(Font.SANS_SERIF, Font.BOLD, fontSize);
+    }
+
+    private List<Font> getBundledFonts() {
+        List<Font> cached = bundledFonts;
+        if (cached != null) {
+            return cached;
+        }
+        synchronized (this) {
+            if (bundledFonts != null) {
+                return bundledFonts;
+            }
+            List<Font> loaded = new ArrayList<>();
+            try {
+                PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
+                Resource[] resources = resolver.getResources("classpath*:fonts/*.ttf");
+                for (Resource resource : resources) {
+                    try (InputStream is = resource.getInputStream()) {
+                        Font font = Font.createFont(Font.TRUETYPE_FONT, is);
+                        loaded.add(font);
+                    } catch (Exception ex) {
+                        log.warn("[ImageOverlay] Failed to load bundled font '{}': {}", resource.getFilename(), ex.getMessage());
+                    }
+                }
+                if (!loaded.isEmpty()) {
+                    log.info("[ImageOverlay] Loaded {} bundled font(s) from resources/fonts", loaded.size());
+                }
+            } catch (IOException ex) {
+                log.warn("[ImageOverlay] Unable to scan bundled fonts: {}", ex.getMessage());
+            }
+            bundledFonts = Collections.unmodifiableList(loaded);
+            return bundledFonts;
+        }
     }
 
     private int resolveTextY(String textPosition, int height, FontMetrics fm, int blockHeight) {
