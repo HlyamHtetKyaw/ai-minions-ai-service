@@ -123,8 +123,82 @@ public class GoogleGeminiSubtitleCuesClient {
 		return new SubtitleCuesResult(jsonArrayText, promptTokens, completionTokens);
 	}
 
+	public SubtitleRefineResult refineSrt(
+			String srtText,
+			String translatedText,
+			String targetLanguage,
+			String styleProfile
+	) {
+		String model = googleAiProperties.getTranscribeModel() != null
+				? googleAiProperties.getTranscribeModel().trim()
+				: "";
+		if (model.isBlank()) {
+			model = MODEL_DEFAULT;
+		}
+		String promptText = SubtitleCuesPrompts.userPromptRefineSrt(srtText, translatedText, targetLanguage, styleProfile);
+		var userMessage = UserMessage.builder()
+				.text(promptText)
+				.build();
+
+		ChatResponse response = null;
+		Exception lastException = null;
+		for (int attempt = 0; attempt < MAX_RETRIES; attempt++) {
+			try {
+				log.info("Gemini subtitles refine attempt {}/{} model='{}'", attempt + 1, MAX_RETRIES, model);
+				var options = GoogleGenAiChatOptions.builder()
+						.model(model)
+						.maxOutputTokens(16000)
+						.temperature(0.0)
+						.build();
+				response = chatModel.call(new Prompt(userMessage, options));
+				break;
+			} catch (Exception e) {
+				lastException = e;
+				log.warn("Gemini subtitles refine attempt {}/{} failed: {}", attempt + 1, MAX_RETRIES, e.getMessage());
+				if (attempt < MAX_RETRIES - 1) {
+					try {
+						Thread.sleep(1000);
+					} catch (InterruptedException ie) {
+						Thread.currentThread().interrupt();
+						throw new IllegalStateException("Interrupted during Gemini refine retry", ie);
+					}
+				}
+			}
+		}
+		if (response == null) {
+			if (lastException instanceof RuntimeException re) {
+				throw re;
+			}
+			throw new IllegalStateException(
+					lastException != null ? lastException.getMessage() : "Unknown Gemini subtitles refine error",
+					lastException);
+		}
+
+		String rawOutput = response.getResult().getOutput().getText();
+		String srt = SubtitleCuesPrompts.extractSrt(rawOutput);
+
+		Integer promptTokens = null;
+		Integer completionTokens = null;
+		try {
+			Usage usage = response.getMetadata() != null ? response.getMetadata().getUsage() : null;
+			if (usage != null) {
+				promptTokens = usage.getPromptTokens();
+				completionTokens = usage.getCompletionTokens();
+			}
+		} catch (Exception ignored) {
+			// ignore
+		}
+		return new SubtitleRefineResult(srt, promptTokens, completionTokens);
+	}
+
 	public record SubtitleCuesResult(
 			String cuesJsonArray,
+			Integer promptTokens,
+			Integer completionTokens
+	) {}
+
+	public record SubtitleRefineResult(
+			String srtText,
 			Integer promptTokens,
 			Integer completionTokens
 	) {}

@@ -29,8 +29,33 @@ public class SubtitleCuesFeatureHandler implements AiFeatureHandler, InlineAudio
 
 	@Override
 	public AiGenerateResponse handle(AiGenerateRequest request, ObjectMapper objectMapper) {
-		throw new IllegalArgumentException(
-				"SUBTITLES is only supported via multipart POST /generate with `request` (JSON) and `audio` (binary) parts.");
+		JsonNode p = request.payload();
+		String op = p.path("operation").asText("subtitles_srt_cues");
+		if (!"subtitles_srt_refine".equalsIgnoreCase(op)) {
+			throw new IllegalArgumentException(
+					"SUBTITLES JSON mode supports only subtitles_srt_refine (use multipart for subtitles_srt_cues)");
+		}
+		validateProvider(request);
+
+		String srtText = p.path("srtText").asText("");
+		String translatedText = p.path("translatedText").asText("");
+		String targetLanguage = p.path("targetLanguage").asText("my");
+		String styleProfile = resolveStyleProfile(p);
+		var refined = googleGeminiSubtitleCuesClient.refineSrt(srtText, translatedText, targetLanguage, styleProfile);
+
+		ObjectNode result = objectMapper.createObjectNode();
+		result.put("srtText", refined.srtText());
+		if (refined.promptTokens() != null) {
+			result.put("tokenIn", refined.promptTokens());
+		}
+		if (refined.completionTokens() != null) {
+			result.put("tokenOut", refined.completionTokens());
+		}
+		return AiGenerateResponse.builder()
+				.featureType(FeatureType.SUBTITLES)
+				.usedProvider(AiProvider.GEMINI)
+				.result(result)
+				.build();
 	}
 
 	@Override
@@ -44,7 +69,7 @@ public class SubtitleCuesFeatureHandler implements AiFeatureHandler, InlineAudio
 			throw new IllegalArgumentException("audio bytes must not be empty");
 		}
 		JsonNode p = request.payload();
-		validateRequest(request, p);
+		validateInlineRequest(request, p);
 
 		long chunkDurationMs = p.path("chunkDurationMs").asLong(25_000);
 		if (chunkDurationMs <= 0) {
@@ -98,11 +123,15 @@ public class SubtitleCuesFeatureHandler implements AiFeatureHandler, InlineAudio
 				.build();
 	}
 
-	private void validateRequest(AiGenerateRequest request, JsonNode p) {
+	private void validateInlineRequest(AiGenerateRequest request, JsonNode p) {
 		String op = p.path("operation").asText("subtitles_srt_cues");
 		if (!"subtitles_srt_cues".equalsIgnoreCase(op)) {
 			throw new IllegalArgumentException("Unsupported SUBTITLES operation: " + op + " (supported: subtitles_srt_cues)");
 		}
+		validateProvider(request);
+	}
+
+	private void validateProvider(AiGenerateRequest request) {
 		if (request.provider() != null && request.provider() != AiProvider.GEMINI) {
 			throw new IllegalArgumentException("SUBTITLES uses Google AI (Gemini); provider must be GEMINI or omitted");
 		}

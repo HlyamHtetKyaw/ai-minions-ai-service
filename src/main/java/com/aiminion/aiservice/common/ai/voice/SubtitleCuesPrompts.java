@@ -74,5 +74,51 @@ public final class SubtitleCuesPrompts {
 		}
 		return "[]";
 	}
+
+	public static String userPromptRefineSrt(
+			String srtText,
+			String translatedText,
+			String targetLanguage,
+			String styleProfile
+	) {
+		String lang = targetLanguage == null || targetLanguage.isBlank() ? "my" : targetLanguage.trim();
+		String style = styleProfile == null || styleProfile.isBlank() ? "caption_rules_v1" : styleProfile.trim();
+		String safeSrt = srtText == null ? "" : srtText.trim();
+		String safeTranslated = translatedText == null ? "" : translatedText.trim();
+		return """
+				TASK:
+				Refine subtitle text using the translated script while preserving timing.
+
+				TARGET_LANGUAGE:
+				%s
+
+				STYLE_PROFILE:
+				%s
+
+				STRICT RULES:
+				- Keep the same number of cues as the input SRT.
+				- Keep each cue index exactly as-is.
+				- Keep each timestamp line exactly as-is. Do NOT modify start/end times.
+				- Only rewrite subtitle text lines to match the translated script naturally.
+				- Do NOT add, remove, merge, or split cues.
+				- Output valid SRT only. No markdown. No code fences. No explanation.
+
+				REFERENCE TRANSLATED SCRIPT:
+				%s
+
+				INPUT SRT TO REFINE:
+				%s
+				""".formatted(lang, style, safeTranslated, safeSrt);
+	}
+
+	public static String extractSrt(String raw) {
+		if (raw == null) return "";
+		String out = raw.trim();
+		if (out.startsWith("```")) {
+			out = out.replaceFirst("^```[a-zA-Z]*\\s*", "");
+			out = out.replaceFirst("\\s*```\\s*$", "");
+		}
+		return out.trim();
+	}
 }
 
