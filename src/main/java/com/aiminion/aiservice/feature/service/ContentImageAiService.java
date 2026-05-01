@@ -6,12 +6,7 @@ import com.aiminion.aiservice.common.ai.request.AiGenerateRequest;
 import com.aiminion.aiservice.common.ai.response.AiGenerateResponse;
 import com.aiminion.aiservice.common.enums.AiProvider;
 import com.aiminion.aiservice.common.enums.FeatureType;
-import com.aiminion.aiservice.common.sanitizer.service.SanitizerService;
 import com.aiminion.aiservice.feature.BaseAiServiceGenerator;
-
-import com.aiminion.aiservice.feature.imageOverlay.request.OverlayRequest;
-import com.aiminion.aiservice.feature.imageOverlay.response.OverlayResult;
-import com.aiminion.aiservice.feature.imageOverlay.service.ImageOverlayService;
 import com.aiminion.aiservice.feature.request.ContentImageRequest;
 import com.aiminion.aiservice.feature.response.ContentImageResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -30,7 +25,6 @@ public class ContentImageAiService
 
     private final AiContentImageGenerator aiContentImageGenerator;
     private final GeminiImagenImageGenerator geminiImagenImageGenerator;
-    private final SanitizerService sanitizerService;
 
     private static final String DEFAULT_SIZE    = "1024x1024";
     private static final String DEFAULT_QUALITY = "standard";
@@ -64,9 +58,6 @@ public class ContentImageAiService
 //                    .photoHeight(req.photoHeight())
                     .build();
         }
-
-        // Sanitizer for GENERATE_CONTENT_IMAGE
-        sanitizerService.sanitize(req.prompt(), FeatureType.GENERATE_CONTENT_IMAGE , request.provider());
 
         ContentImageResponse result = generate(req);
 

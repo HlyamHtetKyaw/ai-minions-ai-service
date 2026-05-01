@@ -4,7 +4,6 @@ import com.aiminion.aiservice.common.ai.handler.AiFeatureHandler;
 import com.aiminion.aiservice.common.ai.request.AiGenerateRequest;
 import com.aiminion.aiservice.common.ai.response.AiGenerateResponse;
 import com.aiminion.aiservice.common.enums.FeatureType;
-import com.aiminion.aiservice.common.sanitizer.service.SanitizerService;
 import com.aiminion.aiservice.feature.BaseAiServiceGenerator;
 import com.aiminion.aiservice.feature.imageOverlay.service.ImageOverlayService;
 import com.aiminion.aiservice.feature.request.ContentImageRequest;
@@ -29,7 +28,6 @@ public class ContentAiService
     private final ContentTextAiService  contentTextAiService;
     private final ContentImageAiService contentImageAiService;
     private final ImageOverlayService imageOverlayService;
-    private final SanitizerService sanitizerService;
 
     @Override
     public FeatureType getFeatureType() {
@@ -64,9 +62,6 @@ public class ContentAiService
 //                    .photoHeight(req.photoHeight())
                     .build();
         }
-
-        // Sanitizer for GENERATE_CONTENT_IMAGE
-        sanitizerService.sanitize(req.topic(), FeatureType.GENERATE_CONTENT , request.provider());
 
         ContentResponse result = generate(req);
 
