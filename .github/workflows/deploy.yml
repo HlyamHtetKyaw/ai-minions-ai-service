@@ -2,7 +2,7 @@ name: Deploy ai-service
 
 on:
   push:
-    branches: [staging]
+    branches: [production]
 
 concurrency:
   group: deploy-ai-service
