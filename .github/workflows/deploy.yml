@@ -35,7 +35,7 @@ jobs:
         run: |
           scp -i ~/.ssh/id_rsa -o StrictHostKeyChecking=yes \
             target/aiservice-0.0.1-SNAPSHOT.jar \
-            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/home/flypay66/jars/ai-service.jar"
+            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/home/root/jars/ai-service.jar"
 
       - name: Restart service
         run: |
