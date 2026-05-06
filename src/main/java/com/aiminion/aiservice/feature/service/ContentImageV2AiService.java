@@ -82,15 +82,29 @@ public class ContentImageV2AiService
 
         byte[] imageBytes;
         String imageName;
-        if (!aiOverlayText.isBlank() || !userOverlayText.isBlank()) {
-            // Keep logo/photo AI-native, but overlay caption text exactly for language accuracy.
-            OverlayRequest textOnlyOverlay = OverlayRequest.builder()
+        boolean needsOverlay = !isBlank(req.logoUrl())
+                || !isBlank(req.photoUrl())
+                || !aiOverlayText.isBlank()
+                || !userOverlayText.isBlank();
+        if (needsOverlay) {
+            // Deterministic post-compose so logo/photo/text always appear when provided.
+            OverlayRequest overlayRequest = OverlayRequest.builder()
                     .baseImageUrl(toDataUri(generated.mimeType(), generated.bytes()))
+                    .logoUrl(req.logoUrl())
+                    .photoUrl(req.photoUrl())
                     .aiShortText(aiOverlayText)
                     .userShortText(userOverlayText)
                     .textPosition("BOTTOM")
+                    .logoPosition(req.logoPosition())
+                    .logoWidth(req.logoWidth())
+                    .logoHeight(req.logoHeight())
+                    .logoMargin(req.logoMargin())
+                    .photoPosition(req.photoPosition())
+                    .photoWidth(req.photoWidth())
+                    .photoHeight(req.photoHeight())
+                    .photoMargin(req.photoMargin())
                     .build();
-            OverlayResult composed = imageOverlayService.compose(textOnlyOverlay);
+            OverlayResult composed = imageOverlayService.compose(overlayRequest);
             imageBytes = composed.imageBytes();
             imageName = composed.imageName();
         } else {
@@ -219,10 +233,11 @@ public class ContentImageV2AiService
             return topicScene;
         }
         return """
-                Main scene (must follow this first): %s
-                Caption intent to match: %s
-                Ensure the scene clearly represents the same meaning as caption intent.
-                """.formatted(captionScene, topicScene);
+                Main scene (highest priority, must follow this first): %s
+                Caption intent to align with: %s
+                Keep both lines semantically consistent; do not switch to unrelated people, places, or events.
+                Prefer a single clear subject connected to the main scene, cinematic social-media composition.
+                """.formatted(topicScene, captionScene);
     }
 
     private String translateToMyanmar(String text, boolean strict) {

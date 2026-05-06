@@ -5,6 +5,8 @@ import com.aiminion.aiservice.feature.imageOverlay.request.OverlayRequest;
 import com.aiminion.aiservice.feature.imageOverlay.response.OverlayResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.stereotype.Service;
 
 import javax.imageio.ImageIO;
@@ -22,6 +24,7 @@ import java.time.Instant;
 import java.util.Base64;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Collections;
 
 /**
  * Handles image composition — overlays logo and photo on a base image.
@@ -33,6 +36,8 @@ import java.util.ArrayList;
 public class ImageOverlayService {
 
     private final ImageOverlayConfig overlayConfig;
+    private volatile List<Font> bundledFonts;
+    private static final int REMOTE_IMAGE_MAX_ATTEMPTS = 4;
 
     public OverlayResult compose(OverlayRequest request) {
         try {
@@ -177,26 +182,64 @@ public class ImageOverlayService {
         if (url.startsWith("data:image")) {
             return loadImageFromDataUri(url);
         }
-        URL imageUrl = URI.create(url).toURL();
-        HttpURLConnection conn = (HttpURLConnection) imageUrl.openConnection();
-
-        conn.setRequestMethod("GET");
-        conn.setConnectTimeout(500000);
-        conn.setReadTimeout(500000);
-
-//        conn.setRequestProperty("User-Agent", "Mozilla/5.0");
-
-        int status = conn.getResponseCode();
-        if (status != 200) {
-            throw new IOException("Failed to fetch image. HTTP Status: " + status);
-        }
-
-        try (InputStream is = conn.getInputStream()) {
-            BufferedImage img = ImageIO.read(is);
-            if (img == null) {
-                throw new IOException("ImageIO.read returned null (invalid image format)");
+        IOException last = null;
+        for (int attempt = 1; attempt <= REMOTE_IMAGE_MAX_ATTEMPTS; attempt++) {
+            HttpURLConnection conn = null;
+            try {
+                URL imageUrl = URI.create(url).toURL();
+                conn = (HttpURLConnection) imageUrl.openConnection();
+                conn.setRequestMethod("GET");
+                conn.setConnectTimeout(20000);
+                conn.setReadTimeout(20000);
+                int status = conn.getResponseCode();
+                if (status != 200) {
+                    String message = "Failed to fetch image. HTTP Status: " + status;
+                    if (attempt < REMOTE_IMAGE_MAX_ATTEMPTS && isRetryableStatus(status)) {
+                        log.warn("[ImageOverlay] Remote image fetch retry {}/{} status={} url={}",
+                                attempt, REMOTE_IMAGE_MAX_ATTEMPTS, status, url);
+                        sleepBeforeRetry(attempt);
+                        continue;
+                    }
+                    throw new IOException(message);
+                }
+                try (InputStream is = conn.getInputStream()) {
+                    BufferedImage img = ImageIO.read(is);
+                    if (img == null) {
+                        throw new IOException("ImageIO.read returned null (invalid image format)");
+                    }
+                    return img;
+                }
+            } catch (IOException ex) {
+                last = ex;
+                if (attempt >= REMOTE_IMAGE_MAX_ATTEMPTS) {
+                    break;
+                }
+                log.warn("[ImageOverlay] Remote image fetch retry {}/{} due to error: {}",
+                        attempt, REMOTE_IMAGE_MAX_ATTEMPTS, ex.getMessage());
+                sleepBeforeRetry(attempt);
+            } finally {
+                if (conn != null) {
+                    conn.disconnect();
+                }
             }
-            return img;
+        }
+        throw last == null ? new IOException("Failed to fetch remote image") : last;
+    }
+
+    private boolean isRetryableStatus(int status) {
+        return status == 403 || status == 404 || status == 408 || status == 425 || status == 429 || status >= 500;
+    }
+
+    private void sleepBeforeRetry(int attempt) {
+        long delayMs = switch (attempt) {
+            case 1 -> 250L;
+            case 2 -> 700L;
+            default -> 1500L;
+        };
+        try {
+            Thread.sleep(delayMs);
+        } catch (InterruptedException ignored) {
+            Thread.currentThread().interrupt();
         }
     }
 
@@ -323,6 +366,12 @@ public class ImageOverlayService {
     }
 
     private Font resolveFontForText(String text, int fontSize) {
+        for (Font base : getBundledFonts()) {
+            Font candidate = base.deriveFont(Font.BOLD, (float) fontSize);
+            if (candidate.canDisplayUpTo(text) == -1) {
+                return candidate;
+            }
+        }
         List<String> preferredFonts = List.of(
                 "Myanmar Text",
                 "Noto Sans Myanmar",
@@ -337,6 +386,38 @@ public class ImageOverlayService {
             }
         }
         return new Font(Font.SANS_SERIF, Font.BOLD, fontSize);
+    }
+
+    private List<Font> getBundledFonts() {
+        List<Font> cached = bundledFonts;
+        if (cached != null) {
+            return cached;
+        }
+        synchronized (this) {
+            if (bundledFonts != null) {
+                return bundledFonts;
+            }
+            List<Font> loaded = new ArrayList<>();
+            try {
+                PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
+                Resource[] resources = resolver.getResources("classpath*:fonts/*.ttf");
+                for (Resource resource : resources) {
+                    try (InputStream is = resource.getInputStream()) {
+                        Font font = Font.createFont(Font.TRUETYPE_FONT, is);
+                        loaded.add(font);
+                    } catch (Exception ex) {
+                        log.warn("[ImageOverlay] Failed to load bundled font '{}': {}", resource.getFilename(), ex.getMessage());
+                    }
+                }
+                if (!loaded.isEmpty()) {
+                    log.info("[ImageOverlay] Loaded {} bundled font(s) from resources/fonts", loaded.size());
+                }
+            } catch (IOException ex) {
+                log.warn("[ImageOverlay] Unable to scan bundled fonts: {}", ex.getMessage());
+            }
+            bundledFonts = Collections.unmodifiableList(loaded);
+            return bundledFonts;
+        }
     }
 
     private int resolveTextY(String textPosition, int height, FontMetrics fm, int blockHeight) {
