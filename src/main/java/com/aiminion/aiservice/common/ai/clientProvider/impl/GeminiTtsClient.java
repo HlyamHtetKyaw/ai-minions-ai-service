@@ -2,6 +2,7 @@ package com.aiminion.aiservice.common.ai.clientProvider.impl;
 
 import com.aiminion.aiservice.common.ai.clientProvider.TtsClient;
 import com.aiminion.aiservice.common.enums.AiProvider;
+import com.aiminion.aiservice.common.ai.context.UserGeminiApiKeyContext;
 import com.aiminion.aiservice.feature.response.VoiceModelDescriptor;
 import com.aiminion.aiservice.feature.response.VoiceOverResponse;
 import com.fasterxml.jackson.core.JsonFactory;
@@ -110,7 +111,13 @@ public class GeminiTtsClient implements TtsClient {
                 )
         );
 
-        String url = String.format(GEMINI_TTS_URL, ttsModel, apiKey);
+        String effectiveKey = apiKey;
+        String fromUser = UserGeminiApiKeyContext.get();
+        if (fromUser != null && !fromUser.isBlank()) {
+            effectiveKey = fromUser.trim();
+        }
+
+        String url = String.format(GEMINI_TTS_URL, ttsModel, effectiveKey);
 
         try {
             ResponseEntity<String> response = restTemplate.exchange(
