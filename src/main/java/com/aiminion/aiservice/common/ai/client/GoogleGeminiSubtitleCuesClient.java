@@ -1,5 +1,6 @@
 package com.aiminion.aiservice.common.ai.client;
 
+import com.aiminion.aiservice.common.ai.clientProvider.GeminiRuntimeChatModelFactory;
 import com.aiminion.aiservice.common.ai.voice.SubtitleCuesPrompts;
 import com.aiminion.aiservice.config.GoogleAiProperties;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +28,7 @@ public class GoogleGeminiSubtitleCuesClient {
 
 	private final ChatModel chatModel;
 	private final GoogleAiProperties googleAiProperties;
+	private final GeminiRuntimeChatModelFactory geminiRuntimeChatModelFactory;
 
 	public SubtitleCuesResult generateCues(
 			byte[] audioBytes,
@@ -81,7 +83,7 @@ public class GoogleGeminiSubtitleCuesClient {
 						.maxOutputTokens(dynamicMaxTokens)
 						.temperature(0.0)
 						.build();
-				response = chatModel.call(new Prompt(userMessage, options));
+				response = geminiRuntimeChatModelFactory.resolve(chatModel).call(new Prompt(userMessage, options));
 				break;
 			} catch (Exception e) {
 				lastException = e;
@@ -150,7 +152,7 @@ public class GoogleGeminiSubtitleCuesClient {
 						.maxOutputTokens(16000)
 						.temperature(0.0)
 						.build();
-				response = chatModel.call(new Prompt(userMessage, options));
+				response = geminiRuntimeChatModelFactory.resolve(chatModel).call(new Prompt(userMessage, options));
 				break;
 			} catch (Exception e) {
 				lastException = e;

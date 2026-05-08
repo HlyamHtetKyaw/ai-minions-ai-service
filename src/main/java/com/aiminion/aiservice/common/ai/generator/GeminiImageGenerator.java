@@ -1,5 +1,7 @@
 package com.aiminion.aiservice.common.ai.generator;
 
+import com.aiminion.aiservice.common.ai.context.UserGeminiApiKeyContext;
+
 import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -481,7 +483,7 @@ public class GeminiImageGenerator {
         String host = deriveApiHost();
         return UriComponentsBuilder
                 .fromUriString(host + "/" + version + "/models")
-                .queryParam("key", apiKey)
+                .queryParam("key", resolveApiKey())
                 .build(true)
                 .toUriString();
     }
@@ -490,7 +492,7 @@ public class GeminiImageGenerator {
         String host = deriveApiHost();
         return UriComponentsBuilder
                 .fromUriString(host + "/" + version + "/models/" + model + ":" + method)
-                .queryParam("key", apiKey)
+                .queryParam("key", resolveApiKey())
                 .build(true)
                 .toUriString();
     }
@@ -508,6 +510,14 @@ public class GeminiImageGenerator {
             return normalized.substring(0, normalized.indexOf("/v1/models"));
         }
         throw new IllegalStateException("Invalid gemini.api-url. Expected .../v1beta/models/ or .../v1/models/");
+    }
+
+    private String resolveApiKey() {
+        String fromUser = UserGeminiApiKeyContext.get();
+        if (fromUser != null && !fromUser.isBlank()) {
+            return fromUser.trim();
+        }
+        return apiKey;
     }
 
     private record EndpointAttempt(
