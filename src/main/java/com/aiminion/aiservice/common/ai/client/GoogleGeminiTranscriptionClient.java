@@ -15,6 +15,7 @@ import org.springframework.util.MimeTypeUtils;
 
 import com.aiminion.aiservice.common.ai.voice.VoiceDictationStyleTranscribePrompts;
 import com.aiminion.aiservice.config.GoogleAiProperties;
+import com.aiminion.aiservice.common.ai.clientProvider.GeminiRuntimeChatModelFactory;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,6 +30,7 @@ public class GoogleGeminiTranscriptionClient {
 
 	private final ChatModel chatModel;
 	private final GoogleAiProperties googleAiProperties;
+	private final GeminiRuntimeChatModelFactory geminiRuntimeChatModelFactory;
 
 	public TranscriptionResult transcribe(byte[] audioBytes, String mimeType) {
 		if (audioBytes == null || audioBytes.length == 0) {
@@ -71,7 +73,7 @@ public class GoogleGeminiTranscriptionClient {
 						.maxOutputTokens(dynamicMaxTokens)
 						.temperature(0.0)
 						.build();
-				response = chatModel.call(new Prompt(userMessage, options));
+				response = geminiRuntimeChatModelFactory.resolve(chatModel).call(new Prompt(userMessage, options));
 				break;
 			} catch (Exception e) {
 				lastException = e;

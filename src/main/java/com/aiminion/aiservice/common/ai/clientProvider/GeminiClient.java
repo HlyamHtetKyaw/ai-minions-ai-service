@@ -25,6 +25,7 @@ public class GeminiClient implements AiClient {
     private static final int DEFAULT_MAX_OUTPUT_TOKENS = 8192;
 
     private final ChatModel chatModel;
+    private final GeminiRuntimeChatModelFactory geminiRuntimeChatModelFactory;
 
     @Value("${spring.ai.google.genai.chat.options.model:gemini-2.0-flash}")
     private String chatModelName;
@@ -32,8 +33,9 @@ public class GeminiClient implements AiClient {
     @Value("${spring.ai.google.genai.chat.options.temperature:0.2}")
     private double chatTemperature;
 
-    public GeminiClient(ChatModel chatModel) {
+    public GeminiClient(ChatModel chatModel, GeminiRuntimeChatModelFactory geminiRuntimeChatModelFactory) {
         this.chatModel = chatModel;
+        this.geminiRuntimeChatModelFactory = geminiRuntimeChatModelFactory;
     }
 
     @Override
@@ -66,7 +68,8 @@ public class GeminiClient implements AiClient {
                         .maxOutputTokens(DEFAULT_MAX_OUTPUT_TOKENS)
                         .temperature(chatTemperature)
                         .build();
-                response = chatModel.call(new Prompt(messages, options));
+                ChatModel executionModel = geminiRuntimeChatModelFactory.resolve(chatModel);
+                response = executionModel.call(new Prompt(messages, options));
                 break;
             } catch (Exception e) {
                 lastException = e;
