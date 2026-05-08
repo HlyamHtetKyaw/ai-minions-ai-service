@@ -3,6 +3,8 @@ package com.aiminion.aiservice.common.ai.clientProvider;
 import com.aiminion.aiservice.common.ai.request.AiRequest;
 import com.aiminion.aiservice.common.ai.response.AiResponse;
 import com.aiminion.aiservice.common.enums.AiProvider;
+import com.google.genai.errors.ClientException;
+
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.ai.chat.messages.Message;
@@ -71,7 +73,14 @@ public class GeminiClient implements AiClient {
                 ChatModel executionModel = geminiRuntimeChatModelFactory.resolve(chatModel);
                 response = executionModel.call(new Prompt(messages, options));
                 break;
-            } catch (Exception e) {
+            } catch (ClientException e) {
+                lastException = e;
+                log.warn("Gemini text attempt {}/{} failed: {}", attempt + 1, MAX_RETRIES, e.getMessage());
+                log.warn("failed to get Gemini API key");
+                throw e;
+            }
+            
+            catch (Exception e) {
                 lastException = e;
                 log.warn("Gemini text attempt {}/{} failed: {}", attempt + 1, MAX_RETRIES, e.getMessage());
                 if (attempt < MAX_RETRIES - 1) {

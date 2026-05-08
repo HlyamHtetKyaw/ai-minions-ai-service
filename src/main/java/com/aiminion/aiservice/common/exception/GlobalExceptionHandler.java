@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.client.RestClientResponseException;
 
 import com.aiminion.aiservice.common.response.dto.ApiResponse;
+import com.google.genai.errors.ClientException;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -47,6 +48,15 @@ public class GlobalExceptionHandler {
 				.body(ApiResponse.fail(503, ex.getMessage(), null));
 	}
 
+	// com.google.genai.errors.ClientException
+	@ExceptionHandler(ClientException.class)
+	public ResponseEntity<ApiResponse<?>> handleClientException(ClientException ex) {
+		log.warn("Client exception: {}", ex.getMessage(), ex);
+		// 430: custom status for user-provided API key invalid/unauthorized.
+		return ResponseEntity.status(430)
+				.body(ApiResponse.fail(430, ex.getMessage(), null));
+	}
+
 	@ExceptionHandler(RestClientResponseException.class)
 	public ResponseEntity<ApiResponse<?>> handleRestClientResponse(RestClientResponseException ex) {
 		String body = safeResponseBody(ex);
@@ -62,9 +72,25 @@ public class GlobalExceptionHandler {
 
 	@ExceptionHandler(Exception.class)
 	public ResponseEntity<ApiResponse<?>> handleInternal(Exception ex) {
+		ClientException clientCause = findCause(ex, ClientException.class);
+		if (clientCause != null) {
+			return handleClientException(clientCause);
+		}
 		log.error("Unhandled exception (returning generic 500)", ex);
 		return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
 				.body(ApiResponse.fail(500, "Internal Server Error", null));
+	}
+
+	private static <T extends Throwable> T findCause(Throwable ex, Class<T> type) {
+		Throwable cur = ex;
+		int guard = 0;
+		while (cur != null && guard++ < 20) {
+			if (type.isInstance(cur)) {
+				return type.cast(cur);
+			}
+			cur = cur.getCause();
+		}
+		return null;
 	}
 
 	private static String safeResponseBody(RestClientResponseException ex) {
